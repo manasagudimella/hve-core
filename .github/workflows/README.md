@@ -323,13 +323,13 @@ Validates pull requests before merge with soft-fail security scanning.
 
 **Behavior**:
 
-* Runs all 9 modular workflows in parallel
+* Runs 10 jobs in parallel (9 modular workflows + 1 inline dependency-pinning-check job)
 * Validation checks: strict mode (soft-fail: false)
 * Security scans: soft-fail mode (soft-fail: true)
 * Results uploaded as artifacts (upload-sarif: false)
 * Must pass for PR to be mergeable (via branch protection)
 
-**Jobs**: `spell-check`, `markdown-lint`, `table-format`, `psscriptanalyzer`, `frontmatter-validation`, `link-lang-check`, `markdown-link-check`, `gitleaks-scan`, `checkov-scan`
+**Jobs**: `spell-check`, `markdown-lint`, `table-format`, `psscriptanalyzer`, `frontmatter-validation`, `link-lang-check`, `markdown-link-check`, `gitleaks-scan`, `checkov-scan`, `dependency-pinning-check`
 
 #### `main.yml`
 
@@ -342,12 +342,12 @@ Validates code after merge to main branch with strict security scanning.
 
 **Behavior**:
 
-* Runs all 9 modular workflows in parallel
+* Runs 5 jobs in parallel
 * All checks: strict mode (soft-fail: false)
 * Security scans: SARIF uploads enabled (upload-sarif: true)
 * Provides post-merge validation and security monitoring
 
-**Jobs**: `spell-check`, `markdown-lint`, `table-format`, `psscriptanalyzer`, `frontmatter-validation`, `link-lang-check`, `markdown-link-check`, `gitleaks-scan`, `checkov-scan`
+**Jobs**: `spell-check`, `markdown-lint`, `table-format`, `gitleaks-scan`, `checkov-scan`
 
 #### `weekly-security-maintenance.yml`
 
@@ -472,7 +472,8 @@ pr-validation.yml (PR trigger, soft-fail security)
     ├── link-lang-check → link-lang-check.yml
     ├── markdown-link-check → markdown-link-check.yml (soft-fail)
     ├── gitleaks-scan → gitleaks-scan.yml (soft-fail)
-    └── checkov-scan → checkov-scan.yml (soft-fail)
+    ├── checkov-scan → checkov-scan.yml (soft-fail)
+    └── dependency-pinning-check (inline job)
     (All jobs run in parallel)
 
 main.yml (Push to main, strict security)
