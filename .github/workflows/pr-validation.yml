@@ -71,26 +71,6 @@ jobs:
     with:
       soft-fail: true
 
-  gitleaks-scan:
-    name: Gitleaks Secret Scan
-    uses: ./.github/workflows/gitleaks-scan.yml
-    permissions:
-      contents: read
-      security-events: write
-    with:
-      soft-fail: true
-      upload-sarif: false
-
-  checkov-scan:
-    name: Checkov IaC Security Scan
-    uses: ./.github/workflows/checkov-scan.yml
-    permissions:
-      contents: read
-      security-events: write
-    with:
-      soft-fail: true
-      upload-sarif: false
-
   dependency-pinning-check:
     name: Validate Dependency Pinning
     runs-on: ubuntu-latest

@@ -35,22 +35,21 @@ jobs:
     with:
       soft-fail: false
 
-  gitleaks-scan:
-    name: Gitleaks Secret Scan
-    uses: ./.github/workflows/gitleaks-scan.yml
+  codeql-analysis:
+    name: CodeQL Analysis
+    uses: ./.github/workflows/codeql-analysis.yml
     permissions:
       contents: read
       security-events: write
-    with:
-      soft-fail: false
-      upload-sarif: true
+      actions: read
 
-  checkov-scan:
-    name: Checkov IaC Security Scan
-    uses: ./.github/workflows/checkov-scan.yml
+  dependency-pinning-scan:
+    name: Dependency Pinning Scan
+    uses: ./.github/workflows/dependency-pinning-scan.yml
     permissions:
       contents: read
       security-events: write
     with:
       soft-fail: false
       upload-sarif: true
+      upload-artifact: true
