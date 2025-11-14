@@ -83,30 +83,11 @@ jobs:
 
   dependency-pinning-check:
     name: Validate Dependency Pinning
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/dependency-pinning-scan.yml
     permissions:
       contents: read
-    steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@92c522aaa6f53af082553dedc1596c80b71aba33 # v2.10.2
-        with:
-          egress-policy: audit
-
-      - name: Checkout code
-        uses: actions/checkout@71cf2267d89c5cb81562390fa70a37fa40b1305e # v4.2.2
-        with:
-          persist-credentials: false
-        
-      - name: Validate SHA Pinning (Strict Mode)
-        shell: pwsh
-        run: |
-          Write-Host "Validating all dependencies are SHA-pinned..."
-          & scripts/security/Test-DependencyPinning.ps1 `
-            -Path . `
-            -Format console `
-            -FailOnViolations
-          
-          if ($LASTEXITCODE -ne 0) {
-            Write-Error "Unpinned dependencies detected. All GitHub Actions and dependencies must be SHA-pinned."
-            exit 1
-          }
+      security-events: write
+    with:
+      soft-fail: false
+      upload-sarif: true
+      upload-artifact: false
