@@ -82,10 +82,17 @@ jobs:
             OutputPath = 'logs/dependency-pinning-results.json'
           }
           
+          # Enable failure on threshold violations unless soft-fail is requested
+          if ('${{ inputs.soft-fail }}' -ne 'true') {
+            $params['FailOnUnpinned'] = $true
+          }
+          
+          # Pass dependency types filter to script
           if ('${{ inputs.dependency-types }}') {
             $params['IncludeTypes'] = '${{ inputs.dependency-types }}'
           }
           
+          # Pass compliance threshold to script (script handles enforcement)
           if ('${{ inputs.threshold }}') {
             $params['Threshold'] = [int]'${{ inputs.threshold }}'
           }
@@ -108,7 +115,9 @@ jobs:
             $report = Get-Content logs/dependency-pinning-results.json | ConvertFrom-Json
             $complianceScore = $report.ComplianceScore
             $unpinnedCount = $report.UnpinnedDependencies
-            $threshold = [int]'${{ inputs.threshold }}'
+            
+            # Extract threshold from report metadata (script calculated compliance)
+            $threshold = $report.Metadata.ComplianceThreshold
             $isCompliant = $complianceScore -ge $threshold
             
             "compliance-score=$complianceScore" >> $env:GITHUB_OUTPUT
@@ -184,9 +193,3 @@ jobs:
           "@
           })
           "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding UTF8
-
-      - name: Fail job if non-compliant
-        if: steps.pinning.outputs.is-compliant == 'false' && !inputs.soft-fail
-        run: |
-          echo "Dependency pinning scan failed - compliance threshold not met"
-          exit 1

@@ -32,6 +32,11 @@
     Comma-separated list of dependency types to check. Options: github-actions, npm, pip.
     Default is all types.
 
+.PARAMETER Threshold
+    Minimum compliance score percentage required for passing grade (0-100).
+    Script will exit with code 1 if compliance falls below threshold when -FailOnUnpinned is set.
+    Default is 95%.
+
 .PARAMETER Remediate
     Generate remediation suggestions with specific SHA pins for unpinned dependencies.
 
@@ -46,6 +51,18 @@
 .EXAMPLE
     ./Test-DependencyPinning.ps1 -IncludeTypes "github-actions,pip" -Remediate
     Check only GitHub Actions and pip dependencies with remediation suggestions.
+
+.EXAMPLE
+    ./Test-DependencyPinning.ps1 -Threshold 90 -FailOnUnpinned
+    Enforce 90% compliance threshold and fail build if not met.
+
+.EXAMPLE
+    ./Test-DependencyPinning.ps1 -Threshold 100 -IncludeTypes "github-actions"
+    Require 100% SHA pinning for GitHub Actions only.
+
+.EXAMPLE
+    ./Test-DependencyPinning.ps1 -Threshold 80
+    Report compliance against 80% threshold but continue on violations.
 
 .NOTES
     Requires:
@@ -86,6 +103,10 @@ param(
 
     [Parameter(Mandatory = $false)]
     [string]$IncludeTypes = "github-actions,npm,pip",
+
+    [Parameter(Mandatory = $false)]
+    [ValidateRange(0, 100)]
+    [int]$Threshold = 95,
 
     [Parameter(Mandatory = $false)]
     [switch]$Remediate
@@ -432,6 +453,7 @@ function Get-ComplianceReportData {
         IncludedTypes      = $IncludeTypes
         ExcludedPaths      = $ExcludePaths
         RemediationEnabled = $Remediate.IsPresent
+        ComplianceThreshold = $Threshold
     }
 
     return $report
@@ -680,13 +702,24 @@ try {
     if ($report.UnpinnedDependencies -gt 0) {
         Write-PinningLog "$($report.UnpinnedDependencies) dependencies require SHA pinning for security compliance" -Level Warning
 
-        if ($FailOnUnpinned) {
-            Write-PinningLog "Failing build due to dependency pinning violations (-FailOnViolations enabled)" -Level Error
-            exit 1
+        # Check threshold compliance
+        if ($report.ComplianceScore -lt $Threshold) {
+            Write-PinningLog "Compliance score $($report.ComplianceScore)% is below threshold $Threshold%" -Level Error
+            
+            if ($FailOnUnpinned) {
+                Write-PinningLog "Failing build due to compliance threshold violation (-FailOnUnpinned enabled)" -Level Error
+                exit 1
+            }
+            else {
+                Write-PinningLog "Threshold violation detected but continuing (soft-fail mode)" -Level Warning
+            }
+        }
+        else {
+            Write-PinningLog "Compliance score $($report.ComplianceScore)% meets threshold $Threshold%" -Level Info
         }
     }
     else {
-        Write-PinningLog "All dependencies are properly pinned! ✅" -Level Success
+        Write-PinningLog "All dependencies are properly pinned! ✅ (100% compliance, exceeds $Threshold% threshold)" -Level Success
     }
 
 }
