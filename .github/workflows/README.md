@@ -51,12 +51,12 @@ Compose multiple reusable workflows for comprehensive validation and security sc
 
 | Workflow | Triggers | Jobs | Mode | Purpose |
 |----------|----------|------|------|------|
-| `pr-validation.yml` | PR to main | 10 parallel | Strict validation, soft-fail security | Pre-merge quality gate |
-| `main.yml` | Push to main | 5 parallel | Strict mode, SARIF uploads | Post-merge validation |
+| `pr-validation.yml` | PR to main | 8 jobs (7 reusable workflows + 1 inline) | Strict validation, soft-fail security | Pre-merge quality gate |
+| `main.yml` | Push to main | 5 jobs (3 reusable workflows + 2 inline) | Strict mode, SARIF uploads | Post-merge validation |
 | `weekly-security-maintenance.yml` | Schedule (Sun 2AM UTC) | 4 (validate-pinning, check-staleness, codeql, summary) | Soft-fail warnings | Weekly security posture |
 | `security-scan.yml` | Push/PR main/develop | 2 (codeql, dependency-review) | Standard SARIF | Continuous security |
 
-**pr-validation.yml jobs**: spell-check, markdown-lint, table-format, ps-script-analyzer, frontmatter-validation, link-lang-check, markdown-link-check, codeql-analysis, dependency-review, dependency-pinning-scan
+**pr-validation.yml jobs**: spell-check, markdown-lint, table-format, psscriptanalyzer, frontmatter-validation, link-lang-check, markdown-link-check, dependency-pinning-check
 
 **main.yml jobs**: spell-check, markdown-lint, table-format, codeql-analysis, dependency-pinning-scan
 
@@ -69,7 +69,7 @@ Compose multiple reusable workflows for comprehensive validation and security sc
 | `spell-check.yml` | cspell | Validate spelling across all files | `soft-fail` (false) | spell-check-results |
 | `markdown-lint.yml` | markdownlint-cli | Enforce markdown standards | `soft-fail` (false) | markdown-lint-results |
 | `table-format.yml` | markdown-table-formatter | Verify table formatting (check-only) | `soft-fail` (false) | table-format-results |
-| `psscriptanalyzer.yml` | PSScriptAnalyzer | PowerShell static analysis | `soft-fail` (false), `changed-files-only` (true) | psscriptanalyzer-results |
+| `ps-script-analyzer.yml` | PSScriptAnalyzer | PowerShell static analysis | `soft-fail` (false), `changed-files-only` (true) | psscriptanalyzer-results |
 | `frontmatter-validation.yml` | Custom PS script | YAML frontmatter validation | `soft-fail` (false), `changed-files-only` (true), `skip-footer-validation` (false), `warnings-as-errors` (true) | frontmatter-validation-results |
 | `link-lang-check.yml` | Custom PS script | Detect language-specific URLs | `soft-fail` (false) | link-lang-check-results |
 | `markdown-link-check.yml` | markdown-link-check | Validate links (internal/external) | `soft-fail` (true) | markdown-link-check-results |
@@ -86,30 +86,7 @@ jobs:
       soft-fail: false
 ```
 
-#### Security Workflows
-
-| Workflow | Tool | Purpose | Key Inputs | Permissions | SARIF Upload |
-|----------|------|---------|------------|-------------|--------------|
-| `gitleaks-scan.yml` | Gitleaks | Detect secrets/credentials | `soft-fail` (false), `upload-sarif` (false) | contents: read, security-events: write | Optional |
-| `checkov-scan.yml` | Checkov | IaC security scanning | `soft-fail` (false), `upload-sarif` (false) | contents: read, security-events: write | Optional |
-
-Both workflows publish PR annotations, create artifacts (30-day retention), and generate job summaries. SARIF uploads integrate with GitHub Security tab.
-
-**Usage example**:
-
-```yaml
-jobs:
-  gitleaks-scan:
-    uses: ./.github/workflows/gitleaks-scan.yml
-    permissions:
-      contents: read
-      security-events: write
-    with:
-      soft-fail: true
-      upload-sarif: false
-```
-
-## Workflow Naming Convention
+## Workflow Result Publishing Strategy
 
 Each modular workflow implements comprehensive 4-channel result publishing:
 
@@ -167,16 +144,9 @@ Dependabot is configured to automatically create PRs for:
 
 The SHA staleness check workflow complements Dependabot by monitoring for stale pins between updates.
 
+## Security Workflows
 
-1. Create `{tool-name}.yml` following existing patterns
-2. Implement 4-channel result publishing (annotations, artifacts, SARIF if security, summaries)
-3. Add harden-runner and SHA pinning
-4. Use minimal permissions
-5. Add soft-fail input support
-6. Update `pr-validation.yml` and `main.yml` to include new job
-7. Document in this README
-
-### Security Workflows
+### Reusable Security Workflows
 
 #### `codeql-analysis.yml`
 
@@ -247,6 +217,18 @@ The SHA staleness check workflow complements Dependabot by monitoring for stale 
 * Medium: 91-180 days
 * High: 181-365 days
 * Critical: >365 days
+
+## Adding New Workflows
+
+To add a new workflow to the repository:
+
+1. Create `{tool-name}.yml` following existing patterns
+2. Implement 4-channel result publishing (annotations, artifacts, SARIF if security, summaries)
+3. Add harden-runner and SHA pinning
+4. Use minimal permissions
+5. Add soft-fail input support
+6. Update `pr-validation.yml` and `main.yml` to include new job
+7. Document in this README
 
 ## Using Reusable Workflows
 
@@ -365,15 +347,6 @@ Workflows generate markdown summaries displayed in the workflow run:
 * Statistics (files checked, issues found)
 * Tables of violations with file paths
 * Links to artifacts
-
-## Result Publishing Strategy
-
-Each modular workflow implements comprehensive 4-channel result publishing:
-
-1. **PR Annotations**: Warnings/errors appear on Files Changed tab
-2. **Artifacts**: Raw output files retained for 30 days
-3. **SARIF Reports**: Security tab integration (security workflows only)
-4. **Job Summaries**: Rich markdown summaries in Actions tab
 
 ## Local Testing
 
@@ -539,7 +512,7 @@ Use `continue-on-error: true` to prevent workflow failure on SARIF upload issues
 
 | File | Purpose | Used By |
 |------|---------|---------|
-| `scripts/linting/PSScriptAnalyzer.psd1` | PowerShell linting rules | ps-script-analyzer.yml |
+| `scripts/linting/PSScriptAnalyzer.psd1` | PowerShell linting rules | `ps-script-analyzer.yml` |
 | `.markdownlint.json` | Markdown formatting rules | markdown-lint.yml |
 | `scripts/linting/markdown-link-check.config.json` | Link checking configuration | markdown-link-check.yml |
 | `.cspell.json` | Spell checking configuration | spell-check.yml |
