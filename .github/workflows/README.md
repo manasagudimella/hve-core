@@ -54,7 +54,6 @@ Compose multiple reusable workflows for comprehensive validation and security sc
 | `pr-validation.yml` | PR to main/develop (open, push, reopen) | 9 jobs (8 reusable workflows + 1 inline) | Strict validation | Pre-merge quality gate with security |
 | `main.yml` | Push to main | 5 jobs (5 reusable workflows) | Strict mode, SARIF uploads | Post-merge validation |
 | `weekly-security-maintenance.yml` | Schedule (Sun 2AM UTC) | 4 (validate-pinning, check-staleness, codeql, summary) | Soft-fail warnings | Weekly security posture |
-| `security-scan.yml` | Push/PR main/develop | 2 (codeql, dependency-review) | Standard SARIF | Continuous security |
 
 **pr-validation.yml jobs**: codeql-security, spell-check, markdown-lint, table-format, psscriptanalyzer, frontmatter-validation, link-lang-check, markdown-link-check, dependency-pinning-check
 
