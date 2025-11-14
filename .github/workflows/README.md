@@ -219,7 +219,9 @@ The SHA staleness check workflow complements Dependabot by monitoring for stale 
 
 ### CodeQL Execution Strategy
 
-CodeQL runs exclusively through orchestrator workflows to prevent duplicate runs and ensure consistent security scanning:
+**Previous Behavior:** CodeQL previously ran as both a standalone workflow (on PR/push events) AND within orchestrator workflows, causing duplicate analyses on the same commits and wasting GitHub Actions minutes.
+
+**Current Architecture:** CodeQL now runs exclusively through orchestrator workflows to prevent duplicate runs and ensure consistent security scanning:
 
 * **CodeQL PR validation**: Runs via `pr-validation.yml` on all PR activity (open, push, reopen)
 * **Main branch**: Runs via `main.yml` on every push to main
