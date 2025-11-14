@@ -3,8 +3,6 @@ name: Security Scan
 on:
   push:
     branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
 
 permissions:
   contents: read
@@ -20,10 +18,4 @@ jobs:
       security-events: write
       actions: read
   
-  dependency-review:
-    name: Dependency Review
-    if: github.event_name == 'pull_request'
-    uses: ./.github/workflows/dependency-review.yml
-    permissions:
-      contents: read
-      pull-requests: write
+
