@@ -13,7 +13,7 @@ keywords:
 estimated_reading_time: 5
 ---
 
-HVE-Core provides GitHub Copilot customizations (chat modes, instructions, and prompts) that enhance your development workflow. This guide helps you choose the right installation method for your environment.
+HVE-Core provides GitHub Copilot customizations (custom agents, instructions, and prompts) that enhance your development workflow. This guide helps you choose the right installation method for your environment.
 
 ## Recommended: VS Code Extension ⭐
 
@@ -165,7 +165,7 @@ Run the installer in validation mode:
 
 ## Post-Installation: Update Your .gitignore
 
-HVE-Core chatmodes create ephemeral workflow artifacts in a `.copilot-tracking/` folder within your project. These files include research documents, implementation plans, PR review tracking, and other machine-generated content that should typically not be committed to version control.
+HVE-Core agents create ephemeral workflow artifacts in a `.copilot-tracking/` folder within your project. These files include research documents, implementation plans, PR review tracking, and other machine-generated content that should typically not be committed to version control.
 
 **Add this line to your project's `.gitignore`:**
 
@@ -182,9 +182,9 @@ HVE-Core chatmodes create ephemeral workflow artifacts in a `.copilot-tracking/`
 * Implementation plans from `task-planner`
 * PR review artifacts from `pr-review`
 * Work item planning files for ADO workflows
-* Temporary prompt files used by chatmodes
+* Temporary prompt files used by agents
 
-These artifacts are useful during your workflow session but are ephemeral by design. They help chatmodes/custom agents maintain context across sessions without polluting your repository history.
+These artifacts are useful during your workflow session but are ephemeral by design. They help agents maintain context across sessions without polluting your repository history.
 
 ## Next Steps
 

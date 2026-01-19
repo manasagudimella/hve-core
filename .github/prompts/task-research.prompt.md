@@ -1,5 +1,5 @@
 ---
-description: "Initiates research for task implementation based on user requirements and conversation context - Brought to you by microsoft/hve-core"
+description: "Initiates research for implementation planning based on user requirements - Brought to you by microsoft/hve-core"
 agent: 'task-researcher'
 maturity: stable
 ---
@@ -8,76 +8,88 @@ maturity: stable
 
 ## Inputs
 
-* ${input:chat:true}: (Optional, defaults to true) Include the full chat conversation context for research analysis
-* ${input:topic}: (Required) Primary topic or focus area for research, provided by user prompt or inferred from conversation
+* ${input:chat:true}: (Optional, defaults to true) Include conversation context for research analysis
+* ${input:topic}: (Required) Primary topic or focus area, from user prompt or inferred from conversation
 
-## Research Protocol
+## Tool Availability
 
-### 1. Analyze User Request
+This workflow dispatches subagents for all research activities using the runSubagent tool.
 
-Identify what the user wants to accomplish from their prompt:
+* When runSubagent is available, proceed with subagent dispatch as described in each step.
+* When runSubagent is unavailable, inform the user that subagent dispatch is required for this workflow and stop.
 
-* Determine the primary objective that will drive the research focus
-* Note any specific features, behaviors, or constraints the user has mentioned
-* Clarify what is explicitly in scope and what should be excluded
+## Required Steps
 
-### 2. Synthesize Conversation Context
+### Step 1: Define Research Scope
 
-If `${input:chat}` is true (default), review the conversation history for relevant context:
+Identify what the user wants to accomplish:
 
-* Identify directions already established that should not be revisited
-* Note any approaches the user has explicitly ruled out
-* Collect files, URLs, or tools that were mentioned as relevant
-* Understand any technology or architecture constraints that apply
+* Extract the primary objective from user prompt and conversation context.
+* Note features, behaviors, constraints, and exclusions.
+* Formulate specific questions the research must answer.
 
-### 3. Identify Research Targets
+### Step 2: Locate or Create Research Document
 
-Compile what needs to be researched based on the user request and conversation context:
+Check `.copilot-tracking/research/` for existing files matching `YYYYMMDD-*-research.md`:
 
-* List files to analyze, including those explicitly referenced and others likely relevant to the topic
-* Identify external sources such as documentation, APIs, or reference implementations to investigate
-* Find applicable instruction files (`*.instructions.md`) that define conventions for the topic area
-* Formulate specific questions that the research must answer
+* Extend an existing document when relevant to the topic.
+* Create a new document at `.copilot-tracking/research/YYYYMMDD-<topic>-research.md` otherwise.
 
-Confirm the research scope and targets with the user before proceeding to deep research.
+### Step 3: Dispatch Research Subagents
 
-### 4. Locate or Create Research Document
+Use the runSubagent tool to dispatch subagents for all research activities. Subagents can run in parallel when investigating independent topics.
 
-Check for existing research before starting a new document:
+#### Subagent Instructions
 
-* Search `.copilot-tracking/research/` for files matching `YYYYMMDD-*-research.md` that relate to the topic
-* If a relevant document exists, confirm with the user whether to extend it or start fresh
-* If no relevant document exists, create one at `.copilot-tracking/research/YYYYMMDD-<topic>-research.md` using the topic from `${input:topic}` or derived from the primary objective
+Provide each subagent with the following:
 
-### 5. Execute Deep Research
+* Read and follow `.github/instructions/` files relevant to the research topic.
+* Reference the task-researcher agent for research patterns and tool usage.
+* Assign a specific research question or investigation target.
+* Use semantic_search, grep_search, file reads, and external documentation tools.
+* Write findings to `.copilot-tracking/subagent/YYYYMMDD/<topic>-research.md`.
+* Include source references, file paths with line numbers, and evidence.
 
-Use `runSubagent` when available to parallelize investigation across research targets:
+#### Subagent Response Format
 
-* Provide runSubagent with the specific questions and targets identified in step 3, along with any relevant context from the conversation
-* Have runSubagent respond with detailed findings and reasoning about what was discovered
-* Keep subsequent runSubagent calls consistent by including key findings from prior responses
-* Have runSubagent write detailed findings to subagent research files for reference
+Each subagent returns a structured response:
 
-Synthesize runSubagent responses into the main research document as findings emerge:
+```markdown
+## Research Summary
 
-* Add synthesized objectives to the **Task Implementation Requests** section
-* Record new research leads in the **Potential Next Research** section
-* Incorporate findings, code examples, and references as they are discovered
-* Remove or revise information when new findings contradict earlier assumptions
+**Question:** {{research_question}}
+**Status:** Complete | Incomplete | Blocked
+**Output File:** {{file_path}}
 
-### 6. Keep User Informed
+### Key Findings
 
-Communicate progress and discoveries throughout the research:
+* {{finding_1}}
+* {{finding_2}}
 
-* Summarize significant findings and explain their impact on the task
-* Flag when research reveals the scope is larger or more complex than expected
-* Pause for user input when multiple viable approaches emerge with different trade-offs
+### Clarifying Questions (if any)
 
-When pausing or at natural stopping points, provide the user with:
+* {{question_for_parent}}
+```
 
-* A summary of what has been researched and the key findings so far
-* Any research targets that were identified but not yet explored
+Subagents may respond with clarifying questions when instructions are ambiguous.
+
+### Step 4: Synthesize Findings
+
+Consolidate subagent outputs into the main research document:
+
+* Add objectives to **Task Implementation Requests**.
+* Record leads in **Potential Next Research**.
+* Remove or revise content when new findings contradict earlier assumptions.
+* Dispatch additional subagents when gaps are identified.
+
+### Step 5: Return Findings
+
+Summarize research outcomes:
+
+* Highlight key discoveries and their implementation impact.
+* List remaining alternatives needing decisions.
+* Provide the research document path for handoff to implementation planning.
 
 ---
 
-Proceed with research initiation following the Research Protocol.
+Invoke task-researcher mode and proceed with the Required Steps.

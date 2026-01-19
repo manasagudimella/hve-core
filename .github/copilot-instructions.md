@@ -40,8 +40,9 @@ The project is organized into these main areas:
 
 * Documentation (`docs/`) - Getting started guides, templates, RPI workflow documentation, and contribution guidelines.
 * Scripts (`scripts/`) - Automation for linting, security validation, extension packaging, and development tools.
+* Skills (`.github/skills/`) - Self-contained skill packages with scripts and documentation.
 * Extension (`extension/`) - VS Code extension source and packaging.
-* GitHub Configuration (`.github/`) - Workflows, instructions, prompts, chatmodes, and issue templates.
+* GitHub Configuration (`.github/`) - Workflows, instructions, prompts, agents, and issue templates.
 * Logs (`logs/`) - Output from validation and analysis scripts.
 
 ### Scripts Organization
@@ -54,12 +55,16 @@ Scripts are organized by function:
 * Security (`scripts/security/`) - Dependency pinning validation and SHA staleness checks.
 * Library (`scripts/lib/`) - Shared utilities such as verified downloads.
 
+### Skills Organization
+
+Skills are self-contained packages providing guidance and utilities:
+
 ### Documentation Structure
 
 * Getting Started (`docs/getting-started/`) - Installation and first workflow guides with multiple setup methods.
 * RPI (`docs/rpi/`) - Task researcher, planner, and implementor workflow documentation.
-* Contributing (`docs/contributing/`) - Guidelines for instructions, prompts, chatmodes, and AI artifacts.
-* Templates (`docs/templates/`) - Templates for chat modes, agent modes, and instructions or prompts.
+* Contributing (`docs/contributing/`) - Guidelines for instructions, prompts, agents, and AI artifacts.
+* Templates (`docs/templates/`) - Templates for custom agents, instructions, and prompts.
 
 ### Copilot Tracking
 

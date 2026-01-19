@@ -1,6 +1,7 @@
 ---
 description: "Evaluates prompt engineering artifacts against quality criteria and reports findings - Brought to you by microsoft/hve-core"
 argument-hint: "file=..."
+maturity: stable
 ---
 
 # Prompt Analyze
@@ -9,7 +10,7 @@ This prompt evaluates prompt engineering artifacts against the Prompt Quality Cr
 
 ## Inputs
 
-* ${input:file}: (Required) Target prompt file to analyze. Accepts `.prompt.md`, `.chatmode.md`, `.agent.md`, or `.instructions.md` files.
+* ${input:file}: (Required) Target prompt file to analyze. Accepts `.prompt.md`, `.agent.md`, or `.instructions.md` files.
 
 ## Required Steps
 

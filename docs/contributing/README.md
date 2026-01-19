@@ -1,12 +1,12 @@
 ---
 title: Contributing AI Artifacts
-description: Guides for contributing chatmodes, instructions, and prompts to hve-core
+description: Guides for contributing agents, instructions, and prompts to hve-core
 author: Microsoft
 ms.date: 2025-11-26
 ms.topic: overview
 keywords:
   - contributing
-  - chatmodes
+  - agents
   - instructions
   - prompts
   - ai artifacts
@@ -20,9 +20,10 @@ Guidelines and standards for contributing AI artifacts to hve-core.
 | Guide                                      | Description                                                                     |
 |--------------------------------------------|---------------------------------------------------------------------------------|
 | [Common Standards](ai-artifacts-common.md) | Shared conventions, quality gates, and rejection criteria for all contributions |
-| [Chat Modes](chatmodes.md)                 | How to create and submit new chat mode definitions                              |
+| [Custom Agents](custom-agents.md)          | How to create and submit new agent definitions                                  |
 | [Instructions](instructions.md)            | How to create repository-specific coding guidelines                             |
 | [Prompts](prompts.md)                      | How to create reusable prompt templates                                         |
+| [Skills](skills.md)                        | How to create skill packages with scripts and documentation                     |
 | [Release Process](release-process.md)      | Extension channels, maturity levels, and publishing workflow                    |
 
 ## Before You Start
@@ -33,9 +34,10 @@ Guidelines and standards for contributing AI artifacts to hve-core.
 
 ## Quick Links
 
-- [Chat Modes Directory](../../.github/chatmodes/)
+- [Agents Directory](../../.github/agents/)
 - [Instructions Directory](../../.github/instructions/)
 - [Prompts Directory](../../.github/prompts/)
+- [Skills Directory](../../.github/skills/)
 
 ---
 

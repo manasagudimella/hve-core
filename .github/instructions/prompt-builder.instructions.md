@@ -1,12 +1,12 @@
 ---
 description: 'Authoring standards for prompt engineering artifacts including file types, protocol patterns, writing style, and quality criteria - Brought to you by microsoft/hve-core'
-applyTo: '**/*.prompt.md, **/*.chatmode.md, **/*.agent.md, **/*.instructions.md'
+applyTo: '**/*.prompt.md, **/*.agent.md, **/*.instructions.md, **/SKILL.md'
 maturity: stable
 ---
 
 # Prompt Builder Instructions
 
-These instructions define authoring standards for prompt engineering artifacts. Apply these standards when creating or modifying prompt, chatmode, agent, or instructions files.
+These instructions define authoring standards for prompt engineering artifacts. Apply these standards when creating or modifying prompt, agent, instructions, or skill files.
 
 ## File Types
 
@@ -21,7 +21,7 @@ Purpose: Single-session workflows where users invoke a prompt and Copilot execut
 Characteristics:
 
 * Single invocation completes the workflow.
-* Frontmatter includes `agent: 'agent-name'` to delegate to a chatmode or agent.
+* Frontmatter includes `agent: 'agent-name'` to delegate to an agent.
 * Content ends with `---` followed by an activation instruction.
 * Use `#file:` only when the prompt must pull in the full contents of another file.
 * When the full contents are not required, refer to the file by path or to the relevant section.
@@ -60,46 +60,36 @@ argument-hint: "topic=... [chat={true|false}]"
 
 Validation guidelines:
 
-* When steps are used, format them as `### Step N: Short Summary`.
-* End with `---` activation line followed by instruction to begin.
+* When steps are used, follow the Step-Based Protocols section for structure.
 * Document input variables in an Inputs section when present.
 
-### Chatmode Files
+### Agent Files
 
-*Extension*: `.chatmode.md`
+*Extension*: `.agent.md`
 
-Purpose: Conversational workflows where users interact across multiple turns through a specialized assistant persona.
+Purpose: Agent files support both conversational workflows (multi-turn interactions with a specialized assistant) and autonomous workflows (task execution with minimal user interaction).
 
-Characteristics:
+#### Conversational Agents
+
+Conversational agents guide users through multi-turn interactions:
 
 * Users guide the conversation through different activities or stages.
 * State persists across conversation turns via planning files when needed.
 * Frontmatter defines available `tools` and optional `handoffs` to other agents.
 * Typically represents a domain expert or specialized assistant role.
 
-Consider adding phases when the workflow involves distinct stages that users move between interactively. Simple conversational assistants that respond to varied requests do not need protocol structure.
+Consider adding phases when the workflow involves distinct stages that users move between interactively. Simple conversational assistants that respond to varied requests do not need protocol structure. Follow the Phase-Based Protocols section for phase structure guidelines.
 
-Phase structure guidelines when using phases:
+#### Autonomous Agents
 
-* Create a `## Required Phases` section to contain all phases.
-* Name phases with descriptive titles (Phase 1: Analyze, Phase 2: Discover).
-* Follow conversation guidelines for phase transitions.
-* Specify planning files for state persistence when needed.
-
-### Agent Files
-
-*Extension*: `.agent.md`
-
-Purpose: Autonomous workflows where the agent executes tasks with minimal user interaction after initial direction.
-
-Characteristics:
+Autonomous agents execute tasks with minimal user interaction:
 
 * Executes autonomously after receiving initial instructions.
 * Frontmatter defines available `tools` and optional `handoffs` to other agents.
 * Typically completes a bounded task and reports results.
 * May dispatch subagents for parallelizable work.
 
-Use agent files when the workflow benefits from autonomous execution rather than conversational back-and-forth.
+Use autonomous agents when the workflow benefits from task execution rather than conversational back-and-forth.
 
 ### Instructions Files
 
@@ -119,7 +109,90 @@ Validation guidelines:
 * Content defines standards and conventions.
 * Wrap examples in fenced code blocks.
 
+### Skill Files
+
+*File Name*: `SKILL.md`
+
+*Location*: `.github/skills/<skill-name>/SKILL.md`
+
+Purpose: Self-contained packages that bundle documentation with executable scripts for specific tasks. Skills differ from prompts and agents by providing concrete utilities rather than conversational guidance.
+
+Characteristics:
+
+* Frontmatter includes `platforms` and `dependencies` for cross-platform support.
+* Bundled with bash and PowerShell scripts in the same directory.
+* Provides step-by-step instructions for task execution.
+* Includes prerequisites, parameters, and troubleshooting sections.
+
+Skill directory structure:
+
+```text
+.github/skills/<skill-name>/
+├── SKILL.md                    # Main skill definition (required)
+├── <action>.sh                 # Bash script for macOS/Linux
+├── <action>.ps1                # PowerShell script for Windows
+└── examples/
+    └── README.md               # Usage examples (recommended)
+```
+
+#### Skill Content Structure
+
+Skill files include these sections in order:
+
+1. **Title (H1)**: Clear heading matching skill purpose.
+2. **Overview**: Brief explanation of what the skill does.
+3. **Prerequisites**: Platform-specific installation requirements.
+4. **Quick Start**: Basic usage with default settings.
+5. **Parameters Reference**: Table documenting all options with defaults.
+6. **Script Reference**: Usage examples for bash and PowerShell.
+7. **Troubleshooting**: Common issues and solutions.
+8. **Attribution Footer**: Standard footer with attribution.
+
+Validation guidelines:
+
+* Include `name` frontmatter matching the skill directory name (required).
+* Include `description` frontmatter (required).
+* Include `maturity` frontmatter (required).
+* Provide parallel script implementations for bash and PowerShell.
+* Document prerequisites for each supported platform.
+* Additional sections can be added between Parameters Reference and Troubleshooting as needed.
+
+## Frontmatter Requirements
+
+This section defines frontmatter field requirements for prompt engineering artifacts.
+
+### Required Fields
+
+All prompt engineering artifacts include these frontmatter fields:
+
+* `description:` - Brief description of the artifact's purpose.
+* `maturity:` - Lifecycle stage: `experimental`, `preview`, `stable`, or `deprecated`.
+
+Note: VS Code shows a validation warning for the `maturity:` field as it's not in VS Code's schema. This is expected; the field is required by the HVE-Core codebase for artifact lifecycle tracking. Ignore VS Code validation warnings for the `maturity:` attribute.
+
+### Optional Fields
+
+Optional fields vary by file type:
+
+* `name:` - Skill identifier (required for skill files only). Must match the skill directory name using lowercase kebab-case.
+* `applyTo:` - Glob patterns (required for instructions files only).
+* `tools:` - Tool restrictions for agents. When omitted, all tools are accessible. When specified, list only tools available in the current VS Code context.
+* `handoffs:` - Agent handoff declarations for agents. Use `agent:` for the target reference.
+* `agent:` - Agent delegation for prompt files.
+* `argument-hint:` - Hint text for prompt picker display.
+* `model:` - Model specification.
+
+### Tool Availability
+
+When authoring prompts that reference specific tools:
+
+* Verify tool availability in the current VS Code context before including in `tools:` frontmatter.
+* When a user references tools not available in the active context, inform them which tools need to be enabled.
+* Do not include tools that VS Code flags as unknown.
+
 ## Protocol Patterns
+
+Protocol patterns apply to prompt and agent files. Skill files follow their own content structure defined in the Skill Content Structure section rather than step-based or phase-based protocols.
 
 ### Step-Based Protocols
 
@@ -137,7 +210,25 @@ Step conventions:
 * Include prompt instructions to follow while implementing the step.
 * Steps can repeat or move to a previous step based on instructions.
 
-Prompt file activation line: End the prompt file with a horizontal rule (`---`) followed by an instruction to begin (for example, "Proceed with research initiation following the Research Protocol.").
+Activation line: End the prompt file with a horizontal rule (`---`) followed by an instruction to begin.
+
+```markdown
+## Required Steps
+
+### Step 1: Gather Context
+
+* Read the target file and identify related files in the same directory.
+* Document findings in a research log.
+
+### Step 2: Apply Changes
+
+* Update the target file based on research findings.
+* Return to Step 1 if additional context is needed.
+
+---
+
+Proceed with the user's request following the Required Steps.
+```
 
 ### Phase-Based Protocols
 
@@ -158,18 +249,39 @@ Phase conventions:
 * Include instructions on when to complete the phase and move onto the next phase.
 * Completing the phase can be signaled from the user or from some ending condition.
 
+```markdown
+## Required Phases
+
+### Phase 1: Research
+
+* Gather context from the user request and related files.
+* Document findings and proceed to Phase 2 when research is complete.
+
+### Phase 2: Build
+
+* Apply changes based on research findings.
+* Return to Phase 1 if gaps are identified during implementation.
+* Proceed to Phase 3 when changes are complete.
+
+### Phase 3: Validate
+
+* Review changes against requirements.
+* Return to Phase 2 if corrections are needed.
+```
+
 ### Shared Protocol Placement
 
-Protocols can be shared with multiple prompt, chatmode, instructions, or agent files by placing the protocol into a `{{name}}.instructions.md` file. Use `#file:` only when the prompt must pull in the full contents of the shared protocol file; otherwise, refer to the file by path or to the relevant section.
-
-For prompt-build.prompt.md, the agent already provides the prompt-builder chatmode context, so a direct `#file:` reference is not required. Referring to the relevant section or protocol is sufficient.
+Protocols can be shared across multiple files by placing the protocol into a `{{name}}.instructions.md` file. Use `#file:` only when the full contents of the protocol file are needed; otherwise, refer to the file by path or to the relevant section.
 
 ## Prompt Writing Style
 
 Prompt instructions have the following characteristics:
 
-* Guide the model on what to do, rather than command it. For example, "Search for files in the provided folder and collect related conventions into the research document."
+* Guide the model on what to do, rather than command it.
 * Written with proper grammar and formatting.
+
+Additional characteristics:
+
 * Use protocol-based structure with descriptive language when phases or ordered steps are needed.
 * Use `*` bulleted lists for groupings and `1.` ordered lists for sequential instruction steps.
 * Use **bold** only for human readability when drawing attention to a key concept.
@@ -177,6 +289,16 @@ Prompt instructions have the following characteristics:
 * Each line other than section headers and frontmatter requirements is treated as a prompt instruction.
 * Follow standard markdown conventions and instructions for the codebase.
 * Bulleted and ordered lists can appear without a title instruction when the section heading already provides context.
+
+Prefer guidance style over command style:
+
+```markdown
+<!-- Avoid command style -->
+You must search the folder and you will collect all conventions.
+
+<!-- Use guidance style -->
+Search the folder and collect conventions into the research document.
+```
 
 ### Patterns to Avoid
 
@@ -211,7 +333,7 @@ Tool invocation:
 
 Task specification:
 
-* Specify which chatmodes, custom agents, or instructions files to follow.
+* Specify which custom agents or instructions files to follow.
 * Prompt instruction files can be selected dynamically when appropriate (for example, "Find related instructions files and have the subagent read and follow them").
 * Indicate the types of tasks the subagent completes.
 * Provide the subagent a step-based protocol when multiple steps are needed.
@@ -229,17 +351,17 @@ Execution patterns:
 
 ## Prompt Quality Criteria
 
-Every item in this checklist applies to the entire file when authoring prompt, instructions, chatmode, or agent files. Review the entire file against each item. Validation fails if any single checklist item is not satisfied.
+Every item applies to the entire file. Validation fails if any item is not satisfied.
 
-* [ ] The entire file and all instructions match the Prompt Writing Style for prompt, instructions, chatmode, or agent files.
-* [ ] The entire file and all instructions follow all Prompt Key Criteria for prompt, instructions, chatmode, or agent files.
-* [ ] Few-shot examples are in correctly fenced code blocks for prompt, instructions, chatmode, or agent files.
-* [ ] Few-shot examples match the prompt instructions exactly without confusion across prompt, instructions, chatmode, or agent files.
-* [ ] File structure follows the appropriate file type guidelines for prompt, instructions, chatmode, or agent files.
-* [ ] Protocols in the file follow all Protocol Patterns for prompt, instructions, chatmode, or agent files.
-* [ ] The user's request and requirements are implemented completely into prompt, instructions, chatmode, or agent files.
-* [ ] Existing instructions have been updated to satisfy this checklist for prompt, instructions, chatmode, or agent files.
-* [ ] New or updated instructions satisfy this checklist for prompt, instructions, chatmode, or agent files.
+* [ ] File structure follows the File Types guidelines for the artifact type.
+* [ ] Frontmatter includes required fields and follows Frontmatter Requirements.
+* [ ] Protocols follow Protocol Patterns when step-based or phase-based structure is used.
+* [ ] Instructions match the Prompt Writing Style.
+* [ ] Instructions follow all Prompt Key Criteria.
+* [ ] Subagent prompts follow Subagent Prompt Criteria when dispatching subagents.
+* [ ] External sources follow External Source Integration when referencing SDKs or APIs.
+* [ ] Few-shot examples are in correctly fenced code blocks and match the instructions exactly.
+* [ ] The user's request and requirements are implemented completely.
 
 ## External Source Integration
 

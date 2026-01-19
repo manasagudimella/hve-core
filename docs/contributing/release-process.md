@@ -110,7 +110,7 @@ The workflow packages the extension and publishes to the VS Code Marketplace usi
 
 Publish the extension after merging a Release PR that includes extension-relevant changes:
 
-* New prompts, instructions, or chat modes
+* New prompts, instructions, or custom agents
 * Bug fixes affecting extension behavior
 * Updated extension metadata or documentation
 
@@ -138,7 +138,7 @@ The VS Code extension is published to two channels with different stability expe
 
 ### Maturity Levels
 
-Each prompt, instruction, and chatmode declares a `maturity` field in its frontmatter:
+Each prompt, instruction, and agent declares a `maturity` field in its frontmatter:
 
 | Level          | Description                                     | Included In         |
 |----------------|-------------------------------------------------|---------------------|

@@ -25,7 +25,7 @@ the codebase.
 2. GitHub Copilot reads instructions when editing matching files
 3. Suggestions follow the documented standards automatically
 
-Chat modes and the `prompt-builder` agent respect these instructions and can create new ones.
+Custom agents and the `prompt-builder` agent respect these instructions and can create new ones.
 See [Contributing Instructions](../../docs/contributing/instructions.md) for authoring guidance.
 
 ## Available Instructions
@@ -48,7 +48,7 @@ See [Contributing Instructions](../../docs/contributing/instructions.md) for aut
 | ---- | ---------- | ------- |
 | [markdown.instructions.md](markdown.instructions.md) | `**/*.md` | Markdown formatting standards |
 | [writing-style.instructions.md](writing-style.instructions.md) | `**/*.md` | Voice, tone, and language conventions |
-| [prompt-builder.instructions.md](prompt-builder.instructions.md) | `**/*.prompt.md, **/*.chatmode.md, **/*.agent.md, **/*.instructions.md` | Prompt engineering artifact authoring |
+| [prompt-builder.instructions.md](prompt-builder.instructions.md) | `**/*.prompt.md, **/*.agent.md, **/*.instructions.md` | Prompt engineering artifact authoring |
 
 ### Git and Workflow
 

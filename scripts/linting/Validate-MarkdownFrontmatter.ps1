@@ -904,7 +904,7 @@ function Test-FrontmatterValidation {
         [Parameter(Mandatory = $false)]
         [switch]$EnableSchemaValidation
     )
-    
+
     # Get repository root
     $repoRoot = (Get-Location).Path
     if (-not (Test-Path ".git")) {
@@ -913,13 +913,13 @@ function Test-FrontmatterValidation {
             $repoRoot = $gitRoot
         }
     }
-    
+
     # Parse .gitignore patterns using shared helper function
     $gitignorePath = Join-Path $repoRoot ".gitignore"
     $gitignorePatterns = Get-GitIgnorePatterns -GitIgnorePath $gitignorePath
-    
+
     Write-Host "🔍 Validating frontmatter across markdown files..." -ForegroundColor Cyan
-    
+
     # Input validation and sanitization
     $errors = @()
     $warnings = @()
@@ -1018,7 +1018,7 @@ function Test-FrontmatterValidation {
             if (Test-Path $path) {
                 # Get files and filter manually with strongly typed array
                 $rawFiles = Get-ChildItem -Path $path -Filter '*.md' -Recurse -File -ErrorAction SilentlyContinue
-                
+
                 # Manual filtering with strongly typed array to prevent implicit string conversion
                 [System.IO.FileInfo[]]$files = @()
                 foreach ($f in $rawFiles) {
@@ -1027,7 +1027,7 @@ function Test-FrontmatterValidation {
                         $f.PSIsContainer -eq $true) {
                         continue
                     }
-                    
+
                     # Check against gitignore patterns
                     $excluded = $false
                     foreach ($pattern in $gitignorePatterns) {
@@ -1036,7 +1036,7 @@ function Test-FrontmatterValidation {
                             break
                         }
                     }
-                    
+
                     # Check against explicit exclude paths
                     if (-not $excluded -and $ExcludePaths.Count -gt 0) {
                         $relativePath = $f.FullName.Replace($repoRoot, '').TrimStart('\', '/').Replace('\', '/')
@@ -1048,16 +1048,16 @@ function Test-FrontmatterValidation {
                             }
                         }
                     }
-                    
+
                     if (-not $excluded) {
                         $files += $f
                     }
                 }
-                
+
                 if ($files.Count -gt 0) {
                     [void]$markdownFiles.AddRange($files)
                     Write-Verbose "Found $($files.Count) markdown files in $path"
-                }  
+                }
                 else {
                     Write-Verbose "No markdown files found in $path"
                 }
@@ -1067,7 +1067,7 @@ function Test-FrontmatterValidation {
             }
         }
     }
-    
+
     Write-Host "Found $($markdownFiles.Count) total markdown files to validate" -ForegroundColor Cyan
 
     # Initialize schema validation once before processing files
@@ -1085,7 +1085,7 @@ function Test-FrontmatterValidation {
             Write-Verbose "Skipping null file object"
             continue
         }
-        
+
         if ([string]::IsNullOrEmpty($file.FullName)) {
             Write-Verbose "Skipping file with empty path"
             continue
@@ -1117,6 +1117,7 @@ function Test-FrontmatterValidation {
                 # Determine content type and required fields using helper function
                 $fileTypeInfo = Get-FileTypeInfo -File $file -RepoRoot $repoRoot
                 $isGitHub = $fileTypeInfo.IsGitHub
+                $isAgent = $file.Name -like "*.agent.md"
                 $isChatMode = $fileTypeInfo.IsChatMode
                 $isPrompt = $fileTypeInfo.IsPrompt
                 $isInstruction = $fileTypeInfo.IsInstruction
@@ -1150,7 +1151,7 @@ function Test-FrontmatterValidation {
                         $shouldHaveFooter = $true
                         $footerSeverity = 'Error'
                     }
-                    # Chatmodes, instructions, and prompts are excluded from footer validation
+                    # Agents, chatmodes, instructions, and prompts are excluded from footer validation
                     # (they are internal configuration files, not public documentation)
                 }
 
@@ -1216,12 +1217,12 @@ function Test-FrontmatterValidation {
 
                 # GitHub resources have different requirements
                 elseif ($isGitHub) {
-                    # ChatMode files (.chatmode.md) have specific frontmatter structure
-                    if ($isChatMode) {
-                        # ChatMode files typically have description, tools, etc. but not standard doc fields
+                    # Agent files (.agent.md) and legacy ChatMode files (.chatmode.md) have specific frontmatter structure
+                    if ($isAgent -or $isChatMode) {
+                        # Agent/ChatMode files typically have description, tools, etc. but not standard doc fields
                         # Only warn if missing description as it's commonly used
                         if (-not $frontmatter.Frontmatter.ContainsKey('description')) {
-                            $warnings += "ChatMode file missing 'description' field: $($file.FullName)"
+                            $warnings += "Agent file missing 'description' field: $($file.FullName)"
                             [void]$filesWithWarnings.Add($file.FullName)
                         }
                     }
@@ -1232,7 +1233,7 @@ function Test-FrontmatterValidation {
                         if (-not $frontmatter.Frontmatter.ContainsKey('applyTo')) {
                             Write-Verbose "Instruction file missing optional 'applyTo' field: $($file.FullName)"
                         }
-                        
+
                         # Validate required description field for instruction files
                         if (-not $frontmatter.Frontmatter.ContainsKey('description')) {
                             $errors += "Instruction file missing required 'description' field: $($file.FullName)"
@@ -1246,8 +1247,8 @@ function Test-FrontmatterValidation {
                         # These are generally freeform content
                     }
                     # Other GitHub files (exclude standard GitHub templates)
-                    elseif ($file.Name -like "*template*" -and 
-                           -not ($file.Name -in @('PULL_REQUEST_TEMPLATE.md', 'ISSUE_TEMPLATE.md')) -and 
+                    elseif ($file.Name -like "*template*" -and
+                           -not ($file.Name -in @('PULL_REQUEST_TEMPLATE.md', 'ISSUE_TEMPLATE.md')) -and
                            -not $frontmatter.Frontmatter.ContainsKey('name')) {
                         $warnings += "GitHub template missing 'name' field: $($file.FullName)"
                         [void]$filesWithWarnings.Add($file.FullName)
@@ -1270,14 +1271,14 @@ function Test-FrontmatterValidation {
                         [void]$filesWithWarnings.Add($file.FullName)
                     }
                 }
-                
+
                 # Manual validation enforces critical rules (fails builds); schema validation above provides comprehensive advisory feedback (soft mode).
                 $isDocsFile = $file.DirectoryName -like "*docs*" -and -not $isGitHubLocal
                 if ($isDocsFile) {
                     # Documentation files should have comprehensive frontmatter
                     $requiredDocsFields = @('title', 'description')
                     $suggestedDocsFields = @('author', 'ms.date', 'ms.topic')
-                    
+
                     foreach ($field in $requiredDocsFields) {
                         if (-not $frontmatter.Frontmatter.ContainsKey($field)) {
                             $errors += "Documentation file missing required field '$field' in: $($file.FullName)"
@@ -1285,7 +1286,7 @@ function Test-FrontmatterValidation {
                             Write-GitHubAnnotation -Type 'error' -Message "Missing required field '$field'" -File $file.FullName
                         }
                     }
-                    
+
                     foreach ($field in $suggestedDocsFields) {
                         if (-not $frontmatter.Frontmatter.ContainsKey($field)) {
                             $warnings += "Documentation file missing suggested field '$field' in: $($file.FullName)"
@@ -1293,7 +1294,7 @@ function Test-FrontmatterValidation {
                             Write-GitHubAnnotation -Type 'warning' -Message "Suggested field '$field' missing" -File $file.FullName
                         }
                     }
-                    
+
                     # Validate date format (ISO 8601: YYYY-MM-DD) or placeholder (YYYY-MM-dd) for docs
                     if ($frontmatter.Frontmatter.ContainsKey('ms.date')) {
                         $date = $frontmatter.Frontmatter['ms.date']
@@ -1308,10 +1309,10 @@ function Test-FrontmatterValidation {
                 # Validate footer presence
                 if (-not $SkipFooterValidation -and $shouldHaveFooter -and $frontmatter.Content) {
                     $hasFooter = Test-MarkdownFooter -Content $frontmatter.Content
-                    
+
                     if (-not $hasFooter) {
                         $footerMessage = "Missing standard Copilot footer in: $($file.FullName)"
-                        
+
                         if ($footerSeverity -eq 'Error') {
                             $errors += $footerMessage
                             [void]$filesWithErrors.Add($file.FullName)
@@ -1326,7 +1327,7 @@ function Test-FrontmatterValidation {
                 }
             }
             else {
-                # Only warn for main docs, not for GitHub files, prompts, or chatmodes
+                # Only warn for main docs, not for GitHub files, prompts, or agents
                 $isGitHubLocal = $file.DirectoryName -like "*.github*"
                 $isMainDocLocal = ($file.DirectoryName -like "*docs*" -or
                     $file.DirectoryName -like "*scripts*") -and
@@ -1407,7 +1408,7 @@ function Test-FrontmatterValidation {
 ### Issues Found
 
 "@
-        
+
         if ($errors.Count -gt 0) {
             $summaryContent += "`n#### Errors`n`n"
             foreach ($errorItem in $errors | Select-Object -First 10) {
@@ -1417,7 +1418,7 @@ function Test-FrontmatterValidation {
                 $summaryContent += "`n*... and $($errors.Count - 10) more errors*`n"
             }
         }
-        
+
         if ($warnings.Count -gt 0) {
             $summaryContent += "`n#### Warnings`n`n"
             foreach ($warning in $warnings | Select-Object -First 10) {
@@ -1427,7 +1428,7 @@ function Test-FrontmatterValidation {
                 $summaryContent += "`n*... and $($warnings.Count - 10) more warnings*`n"
             }
         }
-        
+
         $summaryContent += @"
 
 
@@ -1441,7 +1442,7 @@ function Test-FrontmatterValidation {
 
 See the uploaded artifact for complete details.
 "@
-        
+
         Write-GitHubStepSummary -Content $summaryContent
         Set-GitHubEnv -Name "FRONTMATTER_VALIDATION_FAILED" -Value "true"
     }
@@ -1455,7 +1456,7 @@ See the uploaded artifact for complete details.
 
 All frontmatter fields are valid and properly formatted. Great job! 🎉
 "@
-        
+
         Write-GitHubStepSummary -Content $summaryContent
         Write-Host "✅ Frontmatter validation completed successfully" -ForegroundColor Green
     }

@@ -43,7 +43,7 @@ You'll create:
 ### Switch to Task Researcher
 
 1. Open Copilot Chat (`Ctrl+Alt+I`)
-1. Click the chat mode dropdown at the top
+1. Click the agent picker dropdown at the top
 1. Select **Task Researcher**
 
 ### Your Research Prompt
@@ -86,7 +86,7 @@ From the research output, identify:
 ### Clear and Switch
 
 1. Type `/clear` in the chat to reset context
-1. Click the chat mode dropdown
+1. Click the agent picker dropdown
 1. Select **Task Planner**
 
 ### Your Planning Prompt
@@ -128,7 +128,7 @@ Task Planner creates a structured plan with:
 ### Clear and Switch to Implementor
 
 1. Type `/clear` in the chat to reset context
-1. Click the chat mode dropdown
+1. Click the agent picker dropdown
 1. Select **Task Implementor**
 
 ### Your Implementation Prompt
@@ -206,19 +206,19 @@ Rename-Item docs/rpi/README.md.bak README.md
 
 ## Next Steps
 
-* **Complex multi-file tasks** - See [RPI Workflow Overview](../rpi/README.md) and/or [rpi-agent](../../.github/chatmodes/README.md#rpi-agent)
-* **Simple tasks** - Use [rpi-agent](../../.github/chatmodes/README.md#rpi-agent) or prompts directly
+* **Complex multi-file tasks** - See [RPI Workflow Overview](../rpi/README.md) and/or [rpi-agent](../../.github/README.md#rpi-agent)
+* **Simple tasks** - Use [rpi-agent](../../.github/README.md#rpi-agent) or prompts directly
 * **Contribute** - Read [Contributing Guide](../contributing/README.md)
 
 ## Resources
 
-| Resource                                                 | Description                          |
-|----------------------------------------------------------|--------------------------------------|
-| [RPI Overview](../rpi/README.md)                         | Full RPI workflow documentation      |
-| [Task Researcher](../rpi/task-researcher.md)             | Deep dive on research phase          |
-| [Task Planner](../rpi/task-planner.md)                   | Deep dive on planning phase          |
-| [Task Implementor](../rpi/task-implementor.md)           | Deep dive on implementation phase    |
-| [RPI Agent](../../.github/chatmodes/README.md#rpi-agent) | Autonomous single-workflow execution |
+| Resource                                       | Description                          |
+|------------------------------------------------|--------------------------------------|
+| [RPI Overview](../rpi/README.md)               | Full RPI workflow documentation      |
+| [Task Researcher](../rpi/task-researcher.md)   | Deep dive on research phase          |
+| [Task Planner](../rpi/task-planner.md)         | Deep dive on planning phase          |
+| [Task Implementor](../rpi/task-implementor.md) | Deep dive on implementation phase    |
+| [RPI Agent](../../.github/README.md#rpi-agent) | Autonomous single-workflow execution |
 
 ---
 
