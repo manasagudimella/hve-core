@@ -51,9 +51,11 @@ jobs:
     uses: ./.github/workflows/pester-tests.yml
     permissions:
       contents: read
+      id-token: write
     with:
       soft-fail: false
-      changed-files-only: true
+      changed-files-only: false
+      code-coverage: true
 
   frontmatter-validation:
     name: Frontmatter Validation

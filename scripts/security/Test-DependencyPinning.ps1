@@ -531,7 +531,8 @@ function Export-ComplianceReport {
     Exports compliance report in specified format.
     #>
     param(
-        [ComplianceReport]$Report,
+        # Use duck typing to avoid class type collision during code coverage instrumentation
+        $Report,
         [string]$Format,
         [string]$OutputPath
     )
