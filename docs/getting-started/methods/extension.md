@@ -43,7 +43,7 @@ VS Code Extension System
 │   ├── .github/prompts/        # All prompt templates
 │   ├── .github/instructions/   # All coding guidelines
 │   └── scripts/dev-tools/      # PR reference generation
-└── No workspace configuration needed!
+└── Only optional workspace configuration needed!
 ```
 
 ## Quick Start
@@ -82,7 +82,11 @@ After installation, verify everything works:
    * pr-review
    * adr-creation
 
-## Post-Installation: Update Your .gitignore
+## Post-Installation (Optional)
+
+These optional configurations enhance your HVE-Core experience but are not required for basic functionality.
+
+### Update Your .gitignore
 
 HVE-Core agents create ephemeral workflow artifacts in a `.copilot-tracking/` folder within your project. Add this line to your project's `.gitignore`:
 
@@ -90,8 +94,7 @@ HVE-Core agents create ephemeral workflow artifacts in a `.copilot-tracking/` fo
 .copilot-tracking/
 ```
 
-> [!NOTE]
-> This applies even when using the extension. The folder is created in your project directory when you use agents like `task-researcher` or `pr-review`. See the [installation guide](../install.md#post-installation-update-your-gitignore) for details on what gets stored there.
+This applies even when using the extension. The folder is created in your project directory when you use agents like `task-researcher` or `pr-review`. See the [installation guide](../install.md#post-installation-update-your-gitignore) for details on what gets stored there.
 
 ## What's Included
 
@@ -143,7 +146,7 @@ The extension updates automatically through VS Code's extension system:
 **Steps:**
 
 1. Install extension from marketplace
-2. Start using `@task-planner` and other agents
+2. Start using `task-planner` and other agents
 3. That's it!
 
 ### Scenario 2: Multi-Machine Developer
