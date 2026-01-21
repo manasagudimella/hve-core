@@ -31,9 +31,18 @@ jobs:
           fetch-depth: 0
 
       - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: '1.7.10'
+          ACTIONLINT_SHA256: 'f4c76b71db5755a713e6055cbb0857ed07e103e028bda117817660ebadb4386f'
         run: |
-          bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          curl -sLO "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" | sha256sum -c -
+          tar -xzf "actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" actionlint
+          chmod +x actionlint
           echo "${PWD}" >> "${GITHUB_PATH}"
+          
+          # Verify installation
+          ./actionlint --version
 
       - name: Run YAML Lint
         id: lint

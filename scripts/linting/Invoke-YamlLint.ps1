@@ -68,7 +68,7 @@ if ($ChangedFilesOnly) {
 else {
     Write-Host "Analyzing all workflow files..." -ForegroundColor Cyan
     if (Test-Path $workflowPath) {
-        $filesToAnalyze = Get-ChildItem -Path $workflowPath -Filter "*.yml" -File | ForEach-Object { $_.FullName }
+        $filesToAnalyze = Get-ChildItem -Path $workflowPath -File | Where-Object { $_.Extension -in '.yml', '.yaml' } | ForEach-Object { $_.FullName }
     }
 }
 

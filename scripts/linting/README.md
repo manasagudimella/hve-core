@@ -65,6 +65,22 @@ Static analysis for PowerShell scripts using PSScriptAnalyzer.
 * Artifacts: `psscriptanalyzer-results` (JSON + markdown)
 * Exit Code: Non-zero if violations found
 
+#### `PSScriptAnalyzer.psd1`
+
+Configuration file for PSScriptAnalyzer rules.
+
+**Enforced Rules**:
+
+* **Severity**: Error and Warning levels
+* **Best Practices**: Avoid aliases, use approved verbs, singular nouns
+* **Help**: Require comment-based help
+* **Security**: Check for credentials in code
+* **Performance**: Identify inefficient patterns
+
+**Excluded Rules**:
+
+* `PSAvoidUsingWriteHost` - Allowed for script output
+
 ### YAML Linting
 
 #### `Invoke-YamlLint.ps1`
@@ -75,7 +91,7 @@ Static analysis for GitHub Actions workflow files using actionlint.
 
 **Features**:
 
-* Validates `.github/workflows/*.yml` files
+* Validates `.github/workflows/*.yml` and `.yaml` files
 * Detects changed workflow files via Git
 * Supports analyzing all files or changed files only
 * Creates GitHub Actions annotations for violations
@@ -107,22 +123,6 @@ Static analysis for GitHub Actions workflow files using actionlint.
 * Configuration: `.github/actionlint.yaml`
 * Artifacts: `yaml-lint-results` (JSON)
 * Exit Code: Non-zero if violations found
-
-#### `PSScriptAnalyzer.psd1`
-
-Configuration file for PSScriptAnalyzer rules.
-
-**Enforced Rules**:
-
-* **Severity**: Error and Warning levels
-* **Best Practices**: Avoid aliases, use approved verbs, singular nouns
-* **Help**: Require comment-based help
-* **Security**: Check for credentials in code
-* **Performance**: Identify inefficient patterns
-
-**Excluded Rules**:
-
-* `PSAvoidUsingWriteHost` - Allowed for script output
 
 ### Markdown Validation
 
