@@ -46,12 +46,12 @@ if ($CodeCoverage.IsPresent) {
     $configuration.CodeCoverage.OutputFormat = 'JaCoCo'
     $configuration.CodeCoverage.OutputPath = Join-Path $PSScriptRoot '../../logs/coverage.xml'
 
-    # Resolve coverage paths explicitly - glob patterns don't expand in PowerShell
+    # Resolve coverage paths explicitly - Join-Path with wildcards returns literal paths without file system expansion in Pester configuration
     $scriptRoot = Split-Path $PSScriptRoot -Parent
     $coverageDirs = @('linting', 'security', 'dev-tools', 'lib', 'extension')
 
     $coveragePaths = $coverageDirs | ForEach-Object {
-        Get-ChildItem -Path (Join-Path $scriptRoot $_) -Include '*.ps1', '*.psm1' -Recurse -ErrorAction SilentlyContinue
+        Get-ChildItem -Path (Join-Path $scriptRoot $_) -Include '*.ps1', '*.psm1' -Recurse -File -ErrorAction SilentlyContinue
     } | Where-Object {
         $_.FullName -notmatch '\.Tests\.ps1$'
     } | Select-Object -ExpandProperty FullName
