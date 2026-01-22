@@ -537,6 +537,14 @@ function Export-ComplianceReport {
         [string]$OutputPath
     )
 
+    # Validate required properties on duck-typed $Report parameter
+    $requiredProperties = @('FilePath', 'LineNumber', 'Status', 'Component', 'Pattern', 'FoundVersion')
+    foreach ($prop in $requiredProperties) {
+        if ($null -eq $Report.PSObject.Properties[$prop]) {
+            throw "Report object missing required property: $prop"
+        }
+    }
+
     # Ensure parent directory exists
     $parentDir = Split-Path -Path $OutputPath -Parent
     if ($parentDir -and -not (Test-Path $parentDir)) {

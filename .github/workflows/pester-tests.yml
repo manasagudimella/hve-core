@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write  # Required for Codecov OIDC when code-coverage is enabled
+      id-token: write  # Required for Codecov OIDC when enable-code-coverage is true
     steps:
       - name: Checkout code
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4.2.2
@@ -160,7 +160,12 @@ jobs:
         if: inputs.code-coverage && success() && (!inputs.changed-files-only || env.HAS_CHANGES == 'true')
         shell: pwsh
         run: |
-          $percentage = [double]'${{ steps.pester.outputs.coverage }}'
+          $coverageValue = '${{ steps.pester.outputs.coverage }}'
+          if ([string]::IsNullOrWhiteSpace($coverageValue)) {
+            Write-Warning "Coverage output is empty - skipping threshold check"
+            exit 0
+          }
+          $percentage = [double]$coverageValue
           $threshold = 18  # Informational baseline
 
           Write-Host "Coverage: $percentage%"
