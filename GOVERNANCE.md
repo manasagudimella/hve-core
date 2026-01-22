@@ -26,6 +26,17 @@ This project operates under a **corporate-sponsored maintainer model**:
 
 ## Roles and Responsibilities
 
+The following matrix summarizes capabilities by role:
+
+| Capability | Maintainer | Triage | Contributor |
+|:-----------|:----------:|:------:|:-----------:|
+| Code review | ✅ | ✅ | ✅ |
+| Merge pull requests | ✅ | ❌ | ❌ |
+| Release management | ✅ | ❌ | ❌ |
+| Architecture decisions | ✅ | Advise | Propose |
+| Issue triage | ✅ | ✅ | ❌ |
+| Label management | ✅ | ✅ | ❌ |
+
 ### Maintainers
 
 Maintainers guide project direction, manage releases, and resolve conflicts.
