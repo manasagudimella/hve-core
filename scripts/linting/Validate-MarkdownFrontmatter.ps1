@@ -1571,23 +1571,33 @@ function Get-ChangedMarkdownFileGroup {
     }
 }
 
-# Main execution
-if ($MyInvocation.InvocationName -ne '.') {
-    if ($ChangedFilesOnly) {
-        $result = Test-FrontmatterValidation -ChangedFilesOnly -BaseBranch $BaseBranch -ExcludePaths $ExcludePaths -WarningsAsErrors:$WarningsAsErrors -SkipFooterValidation:$SkipFooterValidation -EnableSchemaValidation:$EnableSchemaValidation
-    }
-    elseif ($Files.Count -gt 0) {
-        $result = Test-FrontmatterValidation -Files $Files -ExcludePaths $ExcludePaths -WarningsAsErrors:$WarningsAsErrors -SkipFooterValidation:$SkipFooterValidation -EnableSchemaValidation:$EnableSchemaValidation
-    }
-    else {
-        $result = Test-FrontmatterValidation -Paths $Paths -ExcludePaths $ExcludePaths -WarningsAsErrors:$WarningsAsErrors -SkipFooterValidation:$SkipFooterValidation -EnableSchemaValidation:$EnableSchemaValidation
-    }
-
-    if ($result.HasIssues) {
-        exit 1
-    }
-    else {
-        Write-Host "✅ All frontmatter validation checks passed!" -ForegroundColor Green
-        exit 0
+#region Main Execution
+try {
+    if ($MyInvocation.InvocationName -ne '.') {
+        if ($ChangedFilesOnly) {
+            $result = Test-FrontmatterValidation -ChangedFilesOnly -BaseBranch $BaseBranch -ExcludePaths $ExcludePaths -WarningsAsErrors:$WarningsAsErrors -SkipFooterValidation:$SkipFooterValidation -EnableSchemaValidation:$EnableSchemaValidation
+        }
+        elseif ($Files.Count -gt 0) {
+            $result = Test-FrontmatterValidation -Files $Files -ExcludePaths $ExcludePaths -WarningsAsErrors:$WarningsAsErrors -SkipFooterValidation:$SkipFooterValidation -EnableSchemaValidation:$EnableSchemaValidation
+        }
+        else {
+            $result = Test-FrontmatterValidation -Paths $Paths -ExcludePaths $ExcludePaths -WarningsAsErrors:$WarningsAsErrors -SkipFooterValidation:$SkipFooterValidation -EnableSchemaValidation:$EnableSchemaValidation
+        }
+        
+        if ($result.HasIssues) {
+            exit 1
+        }
+        else {
+            Write-Host "✅ All frontmatter validation checks passed!" -ForegroundColor Green
+            exit 0
+        }
     }
 }
+catch {
+    Write-Error "Validate Markdown Frontmatter failed: $($_.Exception.Message)"
+    if ($env:GITHUB_ACTIONS -eq 'true') {
+        Write-Output "::error::$($_.Exception.Message)"
+    }
+    exit 1
+}
+#endregion
