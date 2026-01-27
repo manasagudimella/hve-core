@@ -82,7 +82,7 @@ Describe 'actionlint Tool Availability' -Tag 'Unit' {
         }
 
         It 'Writes appropriate error message' {
-            try { & $script:ScriptPath } catch {}
+            try { & $script:ScriptPath } catch { Write-Verbose 'Expected error' }
             Should -Invoke Write-Error -Times 1 -ParameterFilter {
                 $Message -like '*actionlint is not installed*'
             }
@@ -474,7 +474,7 @@ Describe 'GitHub Actions Integration' -Tag 'Unit' {
                 '{"message":"error","filepath":"ci.yml","line":1,"column":1}'
             }
 
-            try { & $script:ScriptPath } catch {}
+            try { & $script:ScriptPath } catch { Write-Verbose 'Expected error' }
             Should -Invoke Set-GitHubEnv -Times 1 -ParameterFilter {
                 $Name -eq 'YAML_LINT_FAILED' -and $Value -eq 'true'
             }
@@ -503,7 +503,7 @@ Describe 'GitHub Actions Integration' -Tag 'Unit' {
                 '{"message":"error","filepath":"ci.yml","line":1,"column":1}'
             }
 
-            try { & $script:ScriptPath } catch {}
+            try { & $script:ScriptPath } catch { Write-Verbose 'Expected error' }
             Should -Invoke Write-GitHubStepSummary -Times 2
         }
     }
