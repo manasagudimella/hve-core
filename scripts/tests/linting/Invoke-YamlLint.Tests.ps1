@@ -17,10 +17,15 @@ BeforeAll {
 
     # Import LintingHelpers for mocking
     Import-Module $script:ModulePath -Force
+
+    # Create stub function for actionlint so it can be mocked even when not installed
+    function global:actionlint { '[]' }
 }
 
 AfterAll {
     Remove-Module LintingHelpers -Force -ErrorAction SilentlyContinue
+    # Remove the actionlint stub function
+    Remove-Item -Path 'Function:\actionlint' -Force -ErrorAction SilentlyContinue
 }
 
 #region Parameter Validation Tests
