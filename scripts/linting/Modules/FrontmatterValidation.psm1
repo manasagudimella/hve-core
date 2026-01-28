@@ -799,6 +799,8 @@ function Test-SingleFileFrontmatter {
 
         [scriptblock]$FileReader = { param($p) Get-Content -Path $p -Raw -ErrorAction Stop },
 
+        [string[]]$FooterExcludePaths = @(),
+
         [switch]$SkipFooterValidation
     )
 
@@ -891,8 +893,20 @@ function Test-SingleFileFrontmatter {
         }
     }
 
+    # Check if file matches footer exclusion pattern
+    # Normalize path separators for cross-platform pattern matching
+    $skipFooterForFile = $false
+    $normalizedRelativePath = $relativePath -replace '\\', '/'
+    foreach ($pattern in $FooterExcludePaths) {
+        $normalizedPattern = $pattern -replace '\\', '/'
+        if ($normalizedRelativePath -like $normalizedPattern) {
+            $skipFooterForFile = $true
+            break
+        }
+    }
+
     # Footer validation for all markdown EXCEPT AI artifacts (prompts, instructions, agents, chatmodes)
-    if (-not $isAiArtifact -and -not $SkipFooterValidation) {
+    if (-not $isAiArtifact -and -not $SkipFooterValidation -and -not $skipFooterForFile) {
         # Determine severity based on file type
         $footerSeverity = 'Warning'
         if ($fileTypeInfo.IsRootCommunityFile -or $fileTypeInfo.IsDevContainer -or $fileTypeInfo.IsVSCodeReadme) {
@@ -937,13 +951,15 @@ function Invoke-FrontmatterValidation {
         [ValidateNotNullOrEmpty()]
         [string]$RepoRoot,
 
+        [string[]]$FooterExcludePaths = @(),
+
         [switch]$SkipFooterValidation
     )
 
     $summary = [ValidationSummary]::new()
 
     foreach ($file in $Files) {
-        $result = Test-SingleFileFrontmatter -FilePath $file -RepoRoot $RepoRoot -SkipFooterValidation:$SkipFooterValidation
+        $result = Test-SingleFileFrontmatter -FilePath $file -RepoRoot $RepoRoot -FooterExcludePaths $FooterExcludePaths -SkipFooterValidation:$SkipFooterValidation
         $summary.AddResult($result)
     }
 

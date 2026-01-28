@@ -1310,6 +1310,74 @@ description: Test
             $result.RelativePath | Should -Be $expectedPath
         }
     }
+
+    Context 'Footer exclude paths' {
+        It 'Skips footer validation for file matching exclusion pattern' {
+            $mockContent = @"
+---
+title: Changelog
+description: Release history
+---
+
+# Changelog
+
+No Copilot footer here
+"@
+            $testFile = Join-Path $script:TestRepoRoot 'CHANGELOG.md'
+            $result = Test-SingleFileFrontmatter `
+                -FilePath $testFile `
+                -RepoRoot $script:TestRepoRoot `
+                -FooterExcludePaths @('CHANGELOG.md') `
+                -FileReader { $mockContent }.GetNewClosure()
+
+            # File without footer should NOT have footer error when excluded
+            $footerIssues = $result.Issues | Where-Object { $_.Field -eq 'footer' }
+            $footerIssues | Should -BeNullOrEmpty
+        }
+
+        It 'Applies footer validation for non-excluded files' {
+            $mockContent = @"
+---
+title: Test Doc
+description: Test description
+---
+
+# Content
+
+No Copilot footer here
+"@
+            $testFile = Join-Path $script:TestRepoRoot 'docs' 'guide.md'
+            $result = Test-SingleFileFrontmatter `
+                -FilePath $testFile `
+                -RepoRoot $script:TestRepoRoot `
+                -FooterExcludePaths @('CHANGELOG.md') `
+                -FileReader { $mockContent }.GetNewClosure()
+
+            # Non-excluded file without footer should have footer error
+            $footerIssues = $result.Issues | Where-Object { $_.Field -eq 'footer' }
+            $footerIssues | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Supports wildcard patterns in exclusions' {
+            $mockContent = @"
+---
+title: Test
+description: Test
+---
+
+No footer
+"@
+            $testFile = Join-Path $script:TestRepoRoot 'logs' 'output.md'
+            $result = Test-SingleFileFrontmatter `
+                -FilePath $testFile `
+                -RepoRoot $script:TestRepoRoot `
+                -FooterExcludePaths @('logs/*.md') `
+                -FileReader { $mockContent }.GetNewClosure()
+
+            $footerIssues = $result.Issues | Where-Object { $_.Field -eq 'footer' }
+            $footerIssues | Should -BeNullOrEmpty
+        }
+    }
 }
 
 Describe 'Invoke-FrontmatterValidation' -Tag 'Unit' {
@@ -1435,6 +1503,29 @@ Describe 'Invoke-FrontmatterValidation' -Tag 'Unit' {
                 -RepoRoot $script:TestRepoRoot
 
             $summary.TotalFiles | Should -Be 1
+        }
+    }
+
+    Context 'FooterExcludePaths threading' {
+        It 'Passes FooterExcludePaths to Test-SingleFileFrontmatter' {
+            $capturedParams = @{}
+
+            Mock Test-SingleFileFrontmatter -ModuleName FrontmatterValidation {
+                $capturedParams.FooterExcludePaths = $FooterExcludePaths
+                & (Get-Module FrontmatterValidation) {
+                    param($path)
+                    $r = [FileValidationResult]::new($path)
+                    $r.HasFrontmatter = $true
+                    return $r
+                } $FilePath
+            }
+
+            $null = Invoke-FrontmatterValidation `
+                -Files @("$script:TestRepoRoot\file.md") `
+                -RepoRoot $script:TestRepoRoot `
+                -FooterExcludePaths @('CHANGELOG.md', 'logs/*.md')
+
+            $capturedParams.FooterExcludePaths | Should -Be @('CHANGELOG.md', 'logs/*.md')
         }
     }
 }

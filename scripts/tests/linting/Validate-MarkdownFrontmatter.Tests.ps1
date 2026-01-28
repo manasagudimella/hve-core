@@ -1055,6 +1055,29 @@ Content
             $relativePath -like $pattern | Should -BeTrue
         }
     }
+
+    Context 'FooterExcludePaths integration' {
+        It 'Passes FooterExcludePaths to Invoke-FrontmatterValidation' {
+            $testFile = Join-Path $TestDrive 'CHANGELOG.md'
+            Set-Content $testFile "---`ndescription: Release history`n---`n# Changelog`n`nNo footer here"
+
+            # File should not have footer error when excluded (use wildcard to match filename in any path)
+            $result = Test-FrontmatterValidation -Files @($testFile) -FooterExcludePaths @('*CHANGELOG.md')
+            $footerErrors = $result.Results | ForEach-Object { $_.Issues } | Where-Object { $_.Field -eq 'footer' }
+            $footerErrors | Should -BeNullOrEmpty
+        }
+
+        It 'Applies footer validation to non-excluded files' {
+            $testFile = Join-Path $TestDrive 'docs' 'guide.md'
+            New-Item -ItemType Directory -Path (Join-Path $TestDrive 'docs') -Force | Out-Null
+            Set-Content $testFile "---`ndescription: Test guide`n---`n# Guide`n`nNo footer here"
+
+            # Non-excluded file should have footer error
+            $result = Test-FrontmatterValidation -Files @($testFile) -FooterExcludePaths @('*CHANGELOG.md')
+            $footerErrors = $result.Results | ForEach-Object { $_.Issues } | Where-Object { $_.Field -eq 'footer' }
+            $footerErrors | Should -Not -BeNullOrEmpty
+        }
+    }
 }
 
 #endregion

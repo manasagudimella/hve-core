@@ -23,6 +23,11 @@ on:
         required: false
         type: boolean
         default: true
+      footer-exclude-paths:
+        description: 'Comma-separated list of file patterns to exclude from footer validation'
+        required: false
+        type: string
+        default: 'CHANGELOG.md'
 
 permissions:
   contents: read
@@ -63,6 +68,12 @@ jobs:
           }
           if ('${{ inputs.warnings-as-errors }}' -eq 'true') {
             $params['WarningsAsErrors'] = $true
+          }
+          
+          # Parse footer exclude paths from comma-separated input
+          $footerExcludeInput = '${{ inputs.footer-exclude-paths }}'
+          if ($footerExcludeInput -and $footerExcludeInput -ne '') {
+            $params['FooterExcludePaths'] = $footerExcludeInput -split ',' | ForEach-Object { $_.Trim() }
           }
           
           # Exclude test fixture files (intentionally invalid frontmatter for testing)
