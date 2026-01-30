@@ -56,6 +56,12 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 | **security-plan-creator** | Creates comprehensive cloud security plans from blueprints | Blueprint-driven threat modeling |
 | **doc-ops** | Documentation operations and maintenance | Does not modify source code |
 
+### Utility Agents
+
+| Agent | Purpose | Key Constraint |
+| ----- | ------- | -------------- |
+| **memory** | Persists repository facts for future tasks | Stores only durable, actionable facts |
+
 ### Code and Review Agents
 
 | Agent | Purpose | Key Constraint |
@@ -191,8 +197,8 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Architecture Decision Records:
 
-* `.copilot-tracking/adrs/{{topic-name}}-draft.md` (working draft)
-* `docs/decisions/YYYY-MM-DD-{{topic}}.md` (final location)
+* `.copilot-tracking/adrs/{{topic-name}}-draft.md`
+* `docs/decisions/YYYY-MM-DD-{{topic}}.md`
 
 **Workflow:** Discovery → Research → Analysis → Documentation
 
@@ -256,9 +262,7 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 ### arch-diagram-builder
 
-**Creates:** ASCII architecture diagrams in markdown:
-
-* Inline diagrams with legend and key relationships
+**Creates:** ASCII architecture diagrams in markdown
 
 **Workflow:** Discovery → Parsing → Relationship Mapping → Generation
 
@@ -291,8 +295,8 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Installation configuration and tracking:
 
-* `.hve-tracking.json` (for agent copy tracking)
-* Settings updates in `.vscode/settings.json`
+* `.hve-tracking.json`
+* `.vscode/settings.json`
 
 **Workflow:** Environment Detection → Decision Matrix → Installation → Validation → Agent Customization
 
@@ -300,72 +304,25 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 ### test-streamlit-dashboard
 
-**Creates:** Test reports and issue documentation:
-
-* Test results summary
-* Issue registry with reproduction steps
+**Creates:** Test reports and issue documentation
 
 **Workflow:** Environment Setup → Functional Testing → Data Validation → Performance Assessment → Issue Reporting
 
 **Critical:** Uses Playwright for browser automation. Requires running Streamlit application. Categorizes issues by severity.
 
-## Common Workflows
+---
 
-### Autonomous Task Completion
+### memory
 
-1. Select **rpi-agent** from agent picker
-2. Provide your request
-3. Agent autonomously researches, implements, and verifies
-4. Review results; agent continues if more work remains
-5. Requires `runSubagent` tool enabled in settings
+**Creates:** Repository memory records:
 
-### Planning a Feature
+* `/memories/repo/<descriptive-name>.jsonl`
 
-1. Select **task-researcher** from agent picker and create research document
-2. Review research and provide decisions on approach
-3. Clear context or start new chat
-4. Select **task-planner** from agent picker and attach research doc
-5. Generate 3-file plan set
-6. Use `/task-implement` to execute the plan (automatically switches to **task-implementor**)
+**Workflow:**  
+Identify actionable repository fact → Validate durability → Store with context → Available for future tasks
 
-### Code Review
-
-1. Select **pr-review** from agent picker
-2. Automatically runs 4-phase protocol
-3. Collaborate during Phase 3 (review items)
-4. Receive `handoff.md` with final PR comments
-
-### Creating Instructions
-
-1. Select **prompt-builder** from agent picker
-2. Draft instruction file with conventions
-3. Auto-validates with Prompt Tester persona
-4. Iterates up to 3 times for quality
-5. Delivered to `.github/instructions/`
-
-### Creating Documentation
-
-1. Select **prd-builder** or **brd-builder** from agent picker
-2. Answer guided questions about the product or business initiative
-3. Provide references and supporting materials
-4. Review and refine iteratively
-5. Finalize when quality gates pass
-
-## Important Notes
-
-* **Linting Exemption:** Files in `.copilot-tracking/**` are exempt from repository linting rules
-* **Agent Switching:** Clear context or start a new chat when switching between specialized agents
-* **Research First:** Task planner requires completed research; will automatically invoke researcher if missing
-* **No Implementation:** Task planner and researcher never implement actual project code—they create planning artifacts only
-* **Subagent Requirements:** Several agents require the `runSubagent` tool enabled in Copilot settings
-
-## Tips
-
-* Be specific in your requests for better results
-* Provide context about what you're working on
-* Review generated outputs before using
-* Chain agents together for complex tasks
-* Use the RPI workflow (Researcher → Planner → Implementor) for substantial features
+**Critical:**  
+Stores only durable, reusable facts. Does not store transient discussion, personal preferences, or speculative information.
 
 ---
 
