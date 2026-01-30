@@ -76,8 +76,8 @@ jobs:
             $params['FooterExcludePaths'] = $footerExcludeInput -split ',' | ForEach-Object { $_.Trim() }
           }
           
-          # Exclude test fixture files (intentionally invalid frontmatter for testing)
-          $params['ExcludePaths'] = @('scripts/tests/Fixtures/**')
+          # Exclude test fixtures and extension README (VS Code marketplace format)
+          $params['ExcludePaths'] = @('scripts/tests/Fixtures/**', 'extension/README.md')
           
           & scripts/linting/Validate-MarkdownFrontmatter.ps1 @params
         continue-on-error: true
