@@ -68,6 +68,8 @@ param(
     [switch]$PreRelease
 )
 
+Import-Module (Join-Path $PSScriptRoot "../lib/Modules/CIHelpers.psm1") -Force
+
 #region Pure Functions
 
 function Test-VsceAvailable {
@@ -604,11 +606,7 @@ try {
 }
 catch {
     Write-Error "Package Extension failed: $($_.Exception.Message)"
-    if ($env:GITHUB_ACTIONS -eq 'true') {
-        # Escape workflow command patterns to prevent injection
-        $escapedMsg = $_.Exception.Message -replace '%', '%25' -replace "`r", '%0D' -replace "`n", '%0A' -replace '::', '%3A%3A'
-        Write-Output "::error::$escapedMsg"
-    }
+    Write-CIAnnotation -Message $_.Exception.Message -Level Error
     exit 1
 }
 #endregion
