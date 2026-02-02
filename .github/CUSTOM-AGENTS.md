@@ -108,8 +108,8 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Single authoritative research document:
 
-* `.copilot-tracking/research/{{YYYY-MM-DD}}-topic-research.md`
-* `.copilot-tracking/subagent/{{YYYY-MM-DD}}/task-research.md`
+* `.copilot-tracking/research/{{YYYY-MM-DD}}-topic-research.md` (primary research with evidence-based recommendations)
+* `.copilot-tracking/subagent/{{YYYY-MM-DD}}/task-research.md` (subagent research outputs when delegating)
 
 **Workflow:** Deep tool-based research → Document findings → Consolidate to one approach → Hand off to planner
 
@@ -119,8 +119,8 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Two interconnected files per task:
 
-* `.copilot-tracking/plans/{{YYYY-MM-DD}}-task-plan.instructions.md`
-* `.copilot-tracking/details/{{YYYY-MM-DD}}-task-details.md`
+* `.copilot-tracking/plans/{{YYYY-MM-DD}}-task-plan.instructions.md` (implementation plan with checklist items)
+* `.copilot-tracking/details/{{YYYY-MM-DD}}-task-details.md` (step-by-step execution details)
 
 **Workflow:** Validates research → Creates plan files → User implements separately
 
@@ -130,7 +130,7 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Change tracking logs:
 
-* `.copilot-tracking/changes/{{YYYY-MM-DD}}-task-changes.md`
+* `.copilot-tracking/changes/{{YYYY-MM-DD}}-task-changes.md` (chronological log with Added/Modified/Removed sections)
 
 **Workflow:** Analyze plan → Dispatch subagents per phase → Track progress → Validate
 
@@ -140,7 +140,7 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Review validation logs:
 
-* `.copilot-tracking/reviews/{{YYYY-MM-DD}}-<topic>-review.md`
+* `.copilot-tracking/reviews/{{YYYY-MM-DD}}-{{topic}}-review.md` (findings with severity levels and follow-up work)
 
 **Workflow:** Locate artifacts → Extract checklist → Validate items → Run commands → Document findings
 
@@ -152,8 +152,10 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Instruction files and prompt files:
 
-* `.github/instructions/*.instructions.md`
-* `.github/prompts/*.prompt.md`
+* `.github/instructions/*.instructions.md` (coding guidelines and conventions)
+* `.github/prompts/*.prompt.md` (reusable workflow prompts)
+* `.copilot-tracking/sandbox/{{YYYY-MM-DD}}-{{prompt-name}}-{{run-number}}/execution-log.md` (test execution trace)
+* `.copilot-tracking/sandbox/{{YYYY-MM-DD}}-{{prompt-name}}-{{run-number}}/evaluation-log.md` (quality validation results)
 
 **Workflow:** Research sources → Draft → Auto-validate with Prompt Tester → Iterate (up to 3 cycles)
 
@@ -163,9 +165,9 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Review tracking files in normalized branch folders:
 
-* `.copilot-tracking/pr/review/{normalized-branch}/in-progress-review.md`
-* `.copilot-tracking/pr/review/{normalized-branch}/pr-reference.xml`
-* `.copilot-tracking/pr/review/{normalized-branch}/handoff.md`
+* `.copilot-tracking/pr/review/{normalized-branch}/in-progress-review.md` (living review document with findings)
+* `.copilot-tracking/pr/review/{normalized-branch}/pr-reference.xml` (PR metadata and diff summary)
+* `.copilot-tracking/pr/review/{normalized-branch}/handoff.md` (finalized comments for PR submission)
 
 **Workflow:** 4 phases (Initialize → Analyze → Collaborative Review → Finalize)
 
@@ -175,8 +177,8 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Product requirements documents with session state:
 
-* `docs/prds/<kebab-case-name>.md`
-* `.copilot-tracking/prd-sessions/<kebab-case-name>.state.json`
+* `docs/prds/<kebab-case-name>.md` (PRD document with requirements)
+* `.copilot-tracking/prd-sessions/<kebab-case-name>.state.json` (session state for resume capability)
 
 **Workflow:** Assess → Discover → Create → Build → Integrate → Validate → Finalize
 
@@ -186,8 +188,8 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Business requirements documents with session state:
 
-* `docs/brds/<kebab-case-name>-brd.md`
-* `.copilot-tracking/brd-sessions/<kebab-case-name>.state.json`
+* `docs/brds/<kebab-case-name>-brd.md` (BRD document with business objectives)
+* `.copilot-tracking/brd-sessions/<kebab-case-name>.state.json` (session state for resume capability)
 
 **Workflow:** Assess → Discover → Create → Elicit → Integrate → Validate → Finalize
 
@@ -197,8 +199,8 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Architecture Decision Records:
 
-* `.copilot-tracking/adrs/{{topic-name}}-draft.md`
-* `docs/decisions/YYYY-MM-DD-{{topic}}.md`
+* `.copilot-tracking/adrs/{{topic-name}}-draft.md` (working draft)
+* `docs/decisions/YYYY-MM-DD-{{topic}}.md` (final location)
 
 **Workflow:** Discovery → Research → Analysis → Documentation
 
@@ -206,7 +208,9 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 ### doc-ops
 
-**Creates:** Documentation updates and maintenance artifacts
+**Creates:** Documentation updates and maintenance artifacts:
+
+* `.copilot-tracking/doc-ops/{{YYYY-MM-DD}}-session.md` (session tracking for documentation operations)
 
 **Workflow:**
 
@@ -218,9 +222,11 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 ### memory
 
-**Creates:** Repository memory records:
+**Creates:** Repository memory records and session context:
 
-* `/memories/repo/<descriptive-name>.jsonl`
+* `.copilot-tracking/memory/{{YYYY-MM-DD}}/{{short-description}}-memory.md` (session continuity context)
+* `.copilot-tracking/memory/{{YYYY-MM-DD}}/{{short-description}}-artifacts/` (optional companion files)
+* `/memories/repo/<descriptive-name>.jsonl` (durable repository facts for future tasks)
 
 **Workflow:** Identify actionable repository fact → Validate durability → Store with context → Available for future tasks
 
@@ -230,8 +236,8 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Security plans and implementation artifacts:
 
-* `security-plan-outputs/security-plan-{blueprint-name}.md`
-* `.copilot-tracking/plans/security-plan-{blueprint-name}.plan.md`
+* `.copilot-tracking/plans/security-plan-{blueprint-name}.plan.md` (planning artifacts and threat analysis)
+* `security-plan-outputs/security-plan-{blueprint-name}.md` (final security plan document)
 
 **Workflow:** Blueprint Selection → Architecture Analysis → Threat Assessment → Plan Generation → Validation
 
@@ -241,7 +247,8 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Exploratory data analysis notebooks:
 
-* `notebooks/*.ipynb`
+* `notebooks/*.ipynb` (EDA notebooks with parameterized data loading)
+* `data/processed/*.parquet` (derived datasets with semantic naming)
 
 **Workflow:** Context Gathering → Notebook Generation → Validation
 
@@ -251,7 +258,9 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Multi-page Streamlit applications:
 
-* Dashboard pages and components
+* `app.py` (main entry point with page navigation)
+* `pages/*.py` (summary statistics, univariate/multivariate analysis, time series)
+* `requirements.txt` (pinned dependencies)
 
 **Workflow:** Project Setup → Core Dashboard Development → Advanced Features → Refinement
 
@@ -261,10 +270,10 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Data documentation artifacts:
 
-* `outputs/data-dictionary-{{dataset}}-{{YYYY-MM-DD}}.md`
-* `outputs/data-profile-{{dataset}}-{{YYYY-MM-DD}}.json`
-* `outputs/data-objectives-{{dataset}}-{{YYYY-MM-DD}}.json`
-* `outputs/data-summary-{{dataset}}-{{YYYY-MM-DD}}.md`
+* `outputs/data-dictionary-{{dataset}}-{{YYYY-MM-DD}}.md` (column definitions and semantics)
+* `outputs/data-profile-{{dataset}}-{{YYYY-MM-DD}}.json` (statistical profile for downstream tools)
+* `outputs/data-objectives-{{dataset}}-{{YYYY-MM-DD}}.json` (analysis goals and constraints)
+* `outputs/data-summary-{{dataset}}-{{YYYY-MM-DD}}.md` (human-readable overview)
 
 **Workflow:** Confirm Scope → Discover Data → Sample & Infer Schema → Profile → Clarify → Emit Artifacts
 
@@ -274,7 +283,8 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** ASCII architecture diagrams in markdown:
 
-* Inline diagrams with legend and key relationships
+* Inline ASCII block diagrams embedded in markdown (pure ASCII for consistent alignment)
+* Component legend and relationship key
 
 **Workflow:** Discovery → Parsing → Relationship Mapping → Generation
 
@@ -284,8 +294,12 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Issue tracking artifacts:
 
-* `.copilot-tracking/github-issues/issue-{number}.md`
-* `.copilot-tracking/github-issues/session-state.md`
+* `.copilot-tracking/github-issues/issue-{number}.md` (issue creation logs with API responses)
+* `.copilot-tracking/github-issues/issues-list-{timestamp}.md` (navigation session results)
+* `.copilot-tracking/github-issues/search-{timestamp}.md` (search query results)
+* `.copilot-tracking/github-issues/session-state.md` (active context and filter state)
+* `.copilot-tracking/github-issues/draft-issue.md` (working draft before submission)
+* `.copilot-tracking/github-issues/current-filters.md` (saved filter configurations)
 
 **Workflow:** Issue Creation | Issue Navigation | Issue Search
 
@@ -295,9 +309,10 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Work item planning files:
 
-* `.copilot-tracking/workitems/prds/<artifact-normalized-name>/planning-log.md`
-* `.copilot-tracking/workitems/prds/<artifact-normalized-name>/work-items.md`
-* `.copilot-tracking/workitems/prds/<artifact-normalized-name>/handoff.md`
+* `.copilot-tracking/workitems/prds/<artifact-normalized-name>/planning-log.md` (session activity and decisions)
+* `.copilot-tracking/workitems/prds/<artifact-normalized-name>/artifact-analysis.md` (PRD parsing and extraction)
+* `.copilot-tracking/workitems/prds/<artifact-normalized-name>/work-items.md` (Epic/Feature/Story hierarchy)
+* `.copilot-tracking/workitems/prds/<artifact-normalized-name>/handoff.md` (final handoff for ADO creation)
 
 **Workflow:** Analyze PRD → Discover Codebase → Discover Related Work Items → Refine → Finalize Handoff
 
@@ -307,8 +322,9 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Installation configuration and tracking:
 
-* `.hve-tracking.json`
-* `.vscode/settings.json`
+* `.hve-tracking.json` (for agent copy tracking)
+* Settings updates in `.vscode/settings.json` (VS Code configuration)
+* `.vscode/mcp.json` (MCP server configuration when applicable)
 
 **Workflow:** Environment Detection → Decision Matrix → Installation → Validation → Agent Customization
 
@@ -318,8 +334,9 @@ The Research-Plan-Implement (RPI) workflow provides a structured approach to com
 
 **Creates:** Test reports and issue documentation:
 
-* Test results summary
-* Issue registry with reproduction steps
+* Test results summary (pass/fail counts by category)
+* Issue registry with reproduction steps (severity-categorized findings)
+* Performance metrics (page load times, render benchmarks)
 
 **Workflow:** Environment Setup → Functional Testing → Data Validation → Performance Assessment → Issue Reporting
 
