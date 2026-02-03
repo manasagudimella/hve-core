@@ -393,7 +393,7 @@ Execute without presenting details to user:
 3. Initialize `planning-log.md` with Phase-1 status.
 4. Check if `pr-reference.xml` exists:
    * If exists: Use existing file silently.
-   * If not exists: Generate using `scripts/dev-tools/pr-ref-gen.sh` with optional `--no-md-diff` flag if `${input:includeMarkdown}` is false.
+   * If not exists: Generate using script path resolution with fallback patterns (see Tooling section) with optional `--no-md-diff` flag if `${input:includeMarkdown}` is false.
 5. Read complete `pr-reference.xml`. For files exceeding 2000 lines, read in 1000-2000 line chunks, capturing complete commit boundaries before advancing to the next chunk.
 6. Log artifact in `planning-log.md` with status `Complete`.
 
