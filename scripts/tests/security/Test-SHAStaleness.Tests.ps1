@@ -13,29 +13,15 @@
 
 BeforeAll {
     $scriptPath = Join-Path $PSScriptRoot '../../security/Test-SHAStaleness.ps1'
-    $scriptContent = Get-Content $scriptPath -Raw
-
-    # Extract function definitions from the script without executing main block
-    # Parse the AST to get function definitions
-    $tokens = $null
-    $errors = $null
-    $ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$tokens, [ref]$errors)
-
-    # Extract all function definitions
-    $functionDefs = $ast.FindAll({ $args[0] -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)
-
-    # Define each function in the current scope using ScriptBlock
-    foreach ($func in $functionDefs) {
-        $funcCode = $func.Extent.Text
-        $scriptBlock = [scriptblock]::Create($funcCode)
-        . $scriptBlock
-    }
+    $script:OriginalSkipMain = $env:HVE_SKIP_MAIN
+    $env:HVE_SKIP_MAIN = '1'
+    . $scriptPath
 
     $mockPath = Join-Path $PSScriptRoot '../Mocks/GitMocks.psm1'
     Import-Module $mockPath -Force
 
     # Save environment before tests
-    Save-GitHubEnvironment
+    Save-CIEnvironment
 
     # Fixture paths
     $script:FixturesPath = Join-Path $PSScriptRoot '../Fixtures/Security'
@@ -43,16 +29,17 @@ BeforeAll {
 
 AfterAll {
     # Restore environment after tests
-    Restore-GitHubEnvironment
+    Restore-CIEnvironment
+    $env:HVE_SKIP_MAIN = $script:OriginalSkipMain
 }
 
 Describe 'Test-GitHubToken' -Tag 'Unit' {
     BeforeEach {
-        Initialize-MockGitHubEnvironment
+        Initialize-MockCIEnvironment
     }
 
     AfterEach {
-        Clear-MockGitHubEnvironment
+        Clear-MockCIEnvironment
     }
 
     Context 'No token provided' {
@@ -118,11 +105,11 @@ Describe 'Test-GitHubToken' -Tag 'Unit' {
 
 Describe 'Invoke-GitHubAPIWithRetry' -Tag 'Unit' {
     BeforeEach {
-        Initialize-MockGitHubEnvironment
+        Initialize-MockCIEnvironment
     }
 
     AfterEach {
-        Clear-MockGitHubEnvironment
+        Clear-MockCIEnvironment
     }
 
     Context 'Successful requests' {

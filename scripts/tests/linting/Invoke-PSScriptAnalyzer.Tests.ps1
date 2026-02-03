@@ -9,7 +9,7 @@
     - Parameter validation
     - Module availability checks
     - ChangedFilesOnly filtering
-    - GitHub Actions integration
+    - CI integration
 #>
 
 BeforeAll {
@@ -33,10 +33,10 @@ Describe 'Invoke-PSScriptAnalyzer Parameter Validation' -Tag 'Unit' {
             Mock Invoke-ScriptAnalyzer { @() }
             Mock Get-ChangedFilesFromGit { @('script.ps1') }
             Mock Get-FilesRecursive { @() }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
         }
 
         It 'Accepts ChangedFilesOnly switch' {
@@ -53,10 +53,10 @@ Describe 'Invoke-PSScriptAnalyzer Parameter Validation' -Tag 'Unit' {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Invoke-ScriptAnalyzer { @() }
             Mock Get-FilesRecursive { @() }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
         }
 
         It 'Uses default config path when not specified' {
@@ -75,10 +75,10 @@ Describe 'Invoke-PSScriptAnalyzer Parameter Validation' -Tag 'Unit' {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Invoke-ScriptAnalyzer { @() }
             Mock Get-FilesRecursive { @() }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
         }
 
         It 'Accepts custom output path' {
@@ -111,10 +111,10 @@ Describe 'PSScriptAnalyzer Module Availability' -Tag 'Unit' {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Invoke-ScriptAnalyzer { @() }
             Mock Get-FilesRecursive { @() }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
         }
 
         It 'Proceeds when module available' {
@@ -132,10 +132,10 @@ Describe 'File Discovery' -Tag 'Unit' {
         BeforeEach {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Invoke-ScriptAnalyzer { @() }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
         }
 
         It 'Uses Get-FilesRecursive for all files' {
@@ -153,10 +153,10 @@ Describe 'File Discovery' -Tag 'Unit' {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Invoke-ScriptAnalyzer { @() }
             Mock Get-FilesRecursive { @() }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
         }
 
         It 'Uses Get-ChangedFilesFromGit when ChangedFilesOnly specified' {
@@ -183,20 +183,20 @@ Describe 'File Discovery' -Tag 'Unit' {
 
 #endregion
 
-#region GitHub Actions Integration Tests
+#region CI Integration Tests
 
-Describe 'GitHub Actions Integration' -Tag 'Unit' {
-    Context 'Write-GitHubAnnotation calls' {
+Describe 'CI Integration' -Tag 'Unit' {
+    Context 'Write-CIAnnotation calls' {
         BeforeEach {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Get-FilesRecursive { @('test.ps1') }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
         }
 
-        It 'Calls Write-GitHubAnnotation for each issue' {
+        It 'Calls Write-CIAnnotation for each issue' {
             Mock Invoke-ScriptAnalyzer {
                 return @(
                     [PSCustomObject]@{
@@ -211,14 +211,14 @@ Describe 'GitHub Actions Integration' -Tag 'Unit' {
             }
 
             & $script:ScriptPath
-            Should -Invoke Write-GitHubAnnotation -Times 1
+            Should -Invoke Write-CIAnnotation -Times 1
         }
 
-        It 'Sets GitHub output for file count' {
+        It 'Sets CI output for file count' {
             Mock Invoke-ScriptAnalyzer { @() }
 
             & $script:ScriptPath
-            Should -Invoke Set-GitHubOutput -Times 1 -ParameterFilter {
+            Should -Invoke Set-CIOutput -Times 1 -ParameterFilter {
                 $Name -eq 'count'
             }
         }
@@ -243,10 +243,10 @@ Describe 'Output Generation' -Tag 'Unit' {
         BeforeEach {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Get-FilesRecursive { @('test.ps1') }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
 
             Mock Invoke-ScriptAnalyzer {
                 return @(
@@ -285,10 +285,10 @@ Describe 'Exit Code Handling' -Tag 'Unit' {
         BeforeEach {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Get-FilesRecursive { @() }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
             Mock Invoke-ScriptAnalyzer { @() }
         }
 
@@ -301,10 +301,10 @@ Describe 'Exit Code Handling' -Tag 'Unit' {
         BeforeEach {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Get-FilesRecursive { @('test.ps1') }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
 
             Mock Invoke-ScriptAnalyzer {
                 return @(

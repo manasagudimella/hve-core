@@ -14,17 +14,17 @@
 #>
 
 BeforeAll {
-    # Extract functions from script using AST
-    $scriptPath = Join-Path $PSScriptRoot '../../linting/Link-Lang-Check.ps1'
-    $scriptContent = Get-Content -Path $scriptPath -Raw
-    $ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$null, [ref]$null)
-    $functions = $ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)
+    $script:ScriptPath = Join-Path $PSScriptRoot '../../linting/Link-Lang-Check.ps1'
+    $script:OriginalSkipMain = $env:HVE_SKIP_MAIN
+    $env:HVE_SKIP_MAIN = '1'
 
-    foreach ($func in $functions) {
-        . ([scriptblock]::Create($func.Extent.Text))
-    }
+    . $script:ScriptPath
 
     $script:FixtureDir = Join-Path $PSScriptRoot '../Fixtures/Linting'
+}
+
+AfterAll {
+    $env:HVE_SKIP_MAIN = $script:OriginalSkipMain
 }
 
 #region Get-GitTextFile Tests

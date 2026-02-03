@@ -18,10 +18,15 @@ BeforeAll {
 
     # Import LintingHelpers for mocking
     Import-Module $script:ModulePath -Force
+
+    $script:OriginalSkipMain = $env:HVE_SKIP_MAIN
+    $env:HVE_SKIP_MAIN = '1'
+    . $script:ScriptPath
 }
 
 AfterAll {
     Remove-Module LintingHelpers -Force -ErrorAction SilentlyContinue
+    $env:HVE_SKIP_MAIN = $script:OriginalSkipMain
 }
 
 #region Link-Lang-Check Invocation Tests
@@ -38,6 +43,101 @@ Describe 'Link-Lang-Check.ps1 Invocation' -Tag 'Unit' {
         It 'Invoke-LinkLanguageCheck.ps1 exists' {
             $scriptExists = Test-Path $script:ScriptPath
             $scriptExists | Should -BeTrue
+        }
+    }
+}
+
+#endregion
+
+#region Invoke-LinkLanguageCheckCore Tests
+
+Describe 'Invoke-LinkLanguageCheckCore' -Tag 'Unit' {
+    Context 'Not in git repository' {
+        BeforeEach {
+            Mock git {
+                $global:LASTEXITCODE = 128
+                return 'fatal: not a git repository'
+            } -ParameterFilter { $args -contains 'rev-parse' }
+
+            Mock Write-Error { }
+        }
+
+        It 'Returns failure exit code' {
+            Invoke-LinkLanguageCheckCore -ExcludePaths @() | Should -Be 1
+        }
+    }
+
+    Context 'Issues found in link scan' {
+        BeforeEach {
+            $script:RepoRoot = $TestDrive
+                        $script:MockLinkLang = Join-Path $TestDrive 'mock-link-lang.ps1'
+
+                        @'
+$json = @"
+[
+    {"file":"docs/a.md","line_number":1,"original_url":"https://docs.microsoft.com/en-us/a"},
+    {"file":"docs/b.md","line_number":2,"original_url":"https://docs.microsoft.com/en-us/b"}
+]
+"@
+
+Write-Output $json
+'@ | Set-Content -Path $script:MockLinkLang -Encoding utf8
+
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:RepoRoot
+            } -ParameterFilter { $args -contains 'rev-parse' }
+
+            Mock Join-Path {
+                return $script:MockLinkLang
+            } -ParameterFilter { $ChildPath -eq 'Link-Lang-Check.ps1' }
+
+            Mock Write-CIAnnotation { }
+            Mock Set-CIOutput { }
+            Mock Set-CIEnv { }
+            Mock Write-CIStepSummary { }
+            Mock Write-Host { }
+        }
+
+        It 'Returns failure exit code and records outputs' {
+            Invoke-LinkLanguageCheckCore -ExcludePaths @('scripts/tests/**') | Should -Be 1
+            Should -Invoke Set-CIOutput -Times 1
+            Should -Invoke Set-CIEnv -Times 1
+            Should -Invoke Write-CIAnnotation -Times 2
+        }
+    }
+
+    Context 'No issues found' {
+        BeforeEach {
+            $script:RepoRoot = $TestDrive
+            $script:MockLinkLang = Join-Path $TestDrive 'mock-link-lang-empty.ps1'
+
+            @'
+$json = @"
+[]
+"@
+
+Write-Output $json
+'@ | Set-Content -Path $script:MockLinkLang -Encoding utf8
+
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:RepoRoot
+            } -ParameterFilter { $args -contains 'rev-parse' }
+
+            Mock Join-Path {
+                return $script:MockLinkLang
+            } -ParameterFilter { $ChildPath -eq 'Link-Lang-Check.ps1' }
+
+            Mock Set-CIOutput { }
+            Mock Write-CIStepSummary { }
+            Mock Write-Host { }
+        }
+
+        It 'Returns success exit code and records outputs' {
+            Invoke-LinkLanguageCheckCore -ExcludePaths @() | Should -Be 0
+            Should -Invoke Set-CIOutput -Times 1
+            Should -Invoke Write-CIStepSummary -Times 1
         }
     }
 }
@@ -106,19 +206,19 @@ Describe 'JSON Output Parsing' -Tag 'Unit' {
 
 Describe 'GitHub Actions Integration' -Tag 'Unit' {
     Context 'Module exports verification' {
-        It 'Write-GitHubAnnotation is available in module' {
+        It 'Write-CIAnnotation is available in module' {
             $module = Get-Module LintingHelpers
-            $module.ExportedFunctions.Keys | Should -Contain 'Write-GitHubAnnotation'
+            $module.ExportedFunctions.Keys | Should -Contain 'Write-CIAnnotation'
         }
 
-        It 'Set-GitHubOutput is available in module' {
+        It 'Set-CIOutput is available in module' {
             $module = Get-Module LintingHelpers
-            $module.ExportedFunctions.Keys | Should -Contain 'Set-GitHubOutput'
+            $module.ExportedFunctions.Keys | Should -Contain 'Set-CIOutput'
         }
 
-        It 'Write-GitHubStepSummary is available in module' {
+        It 'Write-CIStepSummary is available in module' {
             $module = Get-Module LintingHelpers
-            $module.ExportedFunctions.Keys | Should -Contain 'Write-GitHubStepSummary'
+            $module.ExportedFunctions.Keys | Should -Contain 'Write-CIStepSummary'
         }
     }
 

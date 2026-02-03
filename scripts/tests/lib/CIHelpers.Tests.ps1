@@ -17,16 +17,16 @@ BeforeAll {
 
 Describe 'Get-CIPlatform' -Tag 'Unit' {
     BeforeAll {
-        Save-GitHubEnvironment
+        Save-CIEnvironment
     }
 
     AfterAll {
-        Restore-GitHubEnvironment
+        Restore-CIEnvironment
     }
 
     Context 'In GitHub Actions environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:GITHUB_ACTIONS = 'true'
         }
 
@@ -37,7 +37,7 @@ Describe 'Get-CIPlatform' -Tag 'Unit' {
 
     Context 'In Azure DevOps environment with TF_BUILD' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:TF_BUILD = 'True'
         }
 
@@ -48,7 +48,7 @@ Describe 'Get-CIPlatform' -Tag 'Unit' {
 
     Context 'In Azure DevOps environment with AZURE_PIPELINES' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:AZURE_PIPELINES = 'True'
         }
 
@@ -59,7 +59,7 @@ Describe 'Get-CIPlatform' -Tag 'Unit' {
 
     Context 'In local environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
         }
 
         It 'Returns local' {
@@ -69,7 +69,7 @@ Describe 'Get-CIPlatform' -Tag 'Unit' {
 
     Context 'GitHub takes priority over Azure DevOps' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:GITHUB_ACTIONS = 'true'
             $env:TF_BUILD = 'True'
         }
@@ -82,16 +82,16 @@ Describe 'Get-CIPlatform' -Tag 'Unit' {
 
 Describe 'Test-CIEnvironment' -Tag 'Unit' {
     BeforeAll {
-        Save-GitHubEnvironment
+        Save-CIEnvironment
     }
 
     AfterAll {
-        Restore-GitHubEnvironment
+        Restore-CIEnvironment
     }
 
     Context 'In GitHub Actions environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:GITHUB_ACTIONS = 'true'
         }
 
@@ -102,7 +102,7 @@ Describe 'Test-CIEnvironment' -Tag 'Unit' {
 
     Context 'In Azure DevOps environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:TF_BUILD = 'True'
         }
 
@@ -113,7 +113,7 @@ Describe 'Test-CIEnvironment' -Tag 'Unit' {
 
     Context 'In local environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
         }
 
         It 'Returns false' {
@@ -124,20 +124,20 @@ Describe 'Test-CIEnvironment' -Tag 'Unit' {
 
 Describe 'Set-CIOutput' -Tag 'Unit' {
     BeforeAll {
-        Save-GitHubEnvironment
+        Save-CIEnvironment
     }
 
     AfterAll {
-        Restore-GitHubEnvironment
+        Restore-CIEnvironment
     }
 
     Context 'In GitHub Actions environment' {
         BeforeEach {
-            $script:mockFiles = Initialize-MockGitHubEnvironment
+            $script:mockFiles = Initialize-MockCIEnvironment
         }
 
         AfterEach {
-            Remove-MockGitHubFiles -MockFiles $script:mockFiles
+            Remove-MockCIFiles -MockFiles $script:mockFiles
         }
 
         It 'Writes output to GITHUB_OUTPUT file' {
@@ -157,7 +157,7 @@ Describe 'Set-CIOutput' -Tag 'Unit' {
 
     Context 'In Azure DevOps environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:TF_BUILD = 'True'
         }
 
@@ -174,7 +174,7 @@ Describe 'Set-CIOutput' -Tag 'Unit' {
 
     Context 'In local environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
         }
 
         It 'Does not produce console output' {
@@ -185,7 +185,7 @@ Describe 'Set-CIOutput' -Tag 'Unit' {
 
     Context 'GitHub with missing GITHUB_OUTPUT' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:GITHUB_ACTIONS = 'true'
         }
 
@@ -196,7 +196,7 @@ Describe 'Set-CIOutput' -Tag 'Unit' {
 
     Context 'Workflow command injection prevention (Azure DevOps)' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:TF_BUILD = 'True'
         }
 
@@ -215,22 +215,93 @@ Describe 'Set-CIOutput' -Tag 'Unit' {
     }
 }
 
-Describe 'Write-CIStepSummary' -Tag 'Unit' {
+Describe 'Set-CIEnv' -Tag 'Unit' {
     BeforeAll {
-        Save-GitHubEnvironment
+        Save-CIEnvironment
     }
 
     AfterAll {
-        Restore-GitHubEnvironment
+        Restore-CIEnvironment
+    }
+
+    Context 'In GitHub Actions environment' {
+        BeforeEach {
+            $script:mockFiles = Initialize-MockCIEnvironment
+        }
+
+        AfterEach {
+            Remove-MockCIFiles -MockFiles $script:mockFiles
+        }
+
+        It 'Writes environment variable to GITHUB_ENV file' {
+            Set-CIEnv -Name 'TEST_VAR' -Value 'test-value'
+            $content = Get-Content -Path $env:GITHUB_ENV -Raw
+            $content | Should -Match 'TEST_VAR=test-value'
+        }
+
+        It 'Escapes newlines in environment variable value' {
+            Set-CIEnv -Name 'TEST_VAR' -Value "line1`nline2"
+            $content = Get-Content -Path $env:GITHUB_ENV -Raw
+            $content | Should -Match 'line1%0Aline2'
+        }
+    }
+
+    Context 'In Azure DevOps environment' {
+        BeforeEach {
+            Clear-MockCIEnvironment
+            $env:TF_BUILD = 'True'
+        }
+
+        It 'Outputs task.setvariable format' {
+            $output = Set-CIEnv -Name 'test-var' -Value 'test-value'
+            $output | Should -Be '##vso[task.setvariable variable=test-var]test-value'
+        }
+
+        It 'Escapes semicolons in variable name to prevent property injection' {
+            $output = Set-CIEnv -Name 'test;isOutput=true' -Value 'value'
+            $output | Should -Match '%AZP3B'
+        }
+    }
+
+    Context 'In local environment' {
+        BeforeEach {
+            Clear-MockCIEnvironment
+        }
+
+        It 'Does not produce console output' {
+            $output = Set-CIEnv -Name 'test-var' -Value 'test-value'
+            $output | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'GitHub with missing GITHUB_ENV' {
+        BeforeEach {
+            Clear-MockCIEnvironment
+            $env:GITHUB_ACTIONS = 'true'
+        }
+
+        It 'Handles missing GITHUB_ENV gracefully' {
+            { Set-CIEnv -Name 'test-var' -Value 'test-value' } | Should -Not -Throw
+        }
+    }
+}
+
+Describe 'Write-CIStepSummary' -Tag 'Unit' {
+    BeforeAll {
+        Save-CIEnvironment
+    }
+
+    AfterAll {
+        Restore-CIEnvironment
     }
 
     Context 'In GitHub Actions environment with Content' {
         BeforeEach {
-            $script:mockFiles = Initialize-MockGitHubEnvironment
+            $script:mockFiles = Initialize-MockCIEnvironment
         }
 
         AfterEach {
-            Remove-MockGitHubFiles -MockFiles $script:mockFiles
+            Remove-MockCIFiles -MockFiles $script:mockFiles
         }
 
         It 'Writes content to GITHUB_STEP_SUMMARY file' {
@@ -242,13 +313,13 @@ Describe 'Write-CIStepSummary' -Tag 'Unit' {
 
     Context 'In GitHub Actions environment with Path' {
         BeforeEach {
-            $script:mockFiles = Initialize-MockGitHubEnvironment
+            $script:mockFiles = Initialize-MockCIEnvironment
             $script:tempSummaryFile = Join-Path ([System.IO.Path]::GetTempPath()) 'test-summary.md'
             '## Summary from file' | Set-Content -Path $script:tempSummaryFile
         }
 
         AfterEach {
-            Remove-MockGitHubFiles -MockFiles $script:mockFiles
+            Remove-MockCIFiles -MockFiles $script:mockFiles
             Remove-Item -Path $script:tempSummaryFile -Force -ErrorAction SilentlyContinue
         }
 
@@ -261,7 +332,7 @@ Describe 'Write-CIStepSummary' -Tag 'Unit' {
 
     Context 'In Azure DevOps environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:TF_BUILD = 'True'
         }
 
@@ -274,7 +345,7 @@ Describe 'Write-CIStepSummary' -Tag 'Unit' {
 
     Context 'In local environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
         }
 
         It 'Does not produce console output' {
@@ -286,20 +357,20 @@ Describe 'Write-CIStepSummary' -Tag 'Unit' {
 
 Describe 'Write-CIAnnotation' -Tag 'Unit' {
     BeforeAll {
-        Save-GitHubEnvironment
+        Save-CIEnvironment
     }
 
     AfterAll {
-        Restore-GitHubEnvironment
+        Restore-CIEnvironment
     }
 
     Context 'In GitHub Actions environment' {
         BeforeEach {
-            $script:mockFiles = Initialize-MockGitHubEnvironment
+            $script:mockFiles = Initialize-MockCIEnvironment
         }
 
         AfterEach {
-            Remove-MockGitHubFiles -MockFiles $script:mockFiles
+            Remove-MockCIFiles -MockFiles $script:mockFiles
         }
 
         It 'Outputs warning annotation' {
@@ -345,7 +416,7 @@ Describe 'Write-CIAnnotation' -Tag 'Unit' {
 
     Context 'In Azure DevOps environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:TF_BUILD = 'True'
         }
 
@@ -377,7 +448,7 @@ Describe 'Write-CIAnnotation' -Tag 'Unit' {
 
     Context 'In local environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
         }
 
         It 'Uses Write-Warning for all levels' {
@@ -394,11 +465,11 @@ Describe 'Write-CIAnnotation' -Tag 'Unit' {
 
     Context 'Workflow command injection prevention (GitHub Actions)' {
         BeforeEach {
-            $script:mockFiles = Initialize-MockGitHubEnvironment
+            $script:mockFiles = Initialize-MockCIEnvironment
         }
 
         AfterEach {
-            Remove-MockGitHubFiles -MockFiles $script:mockFiles
+            Remove-MockCIFiles -MockFiles $script:mockFiles
         }
 
         It 'Escapes newlines in message to prevent command injection' {
@@ -437,7 +508,7 @@ Describe 'Write-CIAnnotation' -Tag 'Unit' {
 
     Context 'Workflow command injection prevention (Azure DevOps)' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:TF_BUILD = 'True'
         }
 
@@ -468,22 +539,137 @@ Describe 'Write-CIAnnotation' -Tag 'Unit' {
     }
 }
 
-Describe 'Set-CITaskResult' -Tag 'Unit' {
+Describe 'Write-CIAnnotations' -Tag 'Unit' {
     BeforeAll {
-        Save-GitHubEnvironment
+        Save-CIEnvironment
     }
 
     AfterAll {
-        Restore-GitHubEnvironment
+        Restore-CIEnvironment
     }
 
     Context 'In GitHub Actions environment' {
         BeforeEach {
-            $script:mockFiles = Initialize-MockGitHubEnvironment
+            $script:mockFiles = Initialize-MockCIEnvironment
         }
 
         AfterEach {
-            Remove-MockGitHubFiles -MockFiles $script:mockFiles
+            Remove-MockCIFiles -MockFiles $script:mockFiles
+        }
+
+        It 'Outputs error and warning annotations from summary' {
+            $summary = [pscustomobject]@{
+                Results = @(
+                    [pscustomobject]@{
+                        RelativePath = 'test.md'
+                        Issues = @(
+                            [pscustomobject]@{ Type = 'Error'; Message = 'Test error'; Line = 42 },
+                            [pscustomobject]@{ Type = 'Warning'; Message = 'Test warning'; Line = 0 }
+                        )
+                    }
+                )
+            }
+
+            $output = Write-CIAnnotations -Summary $summary
+            $output | Should -Contain '::error file=test.md,line=42::Test error'
+            $output | Should -Contain '::warning file=test.md,line=1::Test warning'
+        }
+
+        It 'Escapes newlines in message' {
+            $summary = [pscustomobject]@{
+                Results = @(
+                    [pscustomobject]@{
+                        RelativePath = 'test.md'
+                        Issues = @(
+                            [pscustomobject]@{ Type = 'Error'; Message = "line1`nline2"; Line = 1 }
+                        )
+                    }
+                )
+            }
+
+            $output = Write-CIAnnotations -Summary $summary
+            $output | Should -Match 'line1%0Aline2'
+        }
+    }
+
+    Context 'In Azure DevOps environment' {
+        BeforeEach {
+            Clear-MockCIEnvironment
+            $env:TF_BUILD = 'True'
+        }
+
+        It 'Outputs task.logissue entries for issues' {
+            $summary = [pscustomobject]@{
+                Results = @(
+                    [pscustomobject]@{
+                        RelativePath = 'test.md'
+                        Issues = @(
+                            [pscustomobject]@{ Type = 'Error'; Message = 'Test error'; Line = 10; Column = 4 }
+                        )
+                    }
+                )
+            }
+
+            $output = Write-CIAnnotations -Summary $summary
+            $output | Should -Be '##vso[task.logissue type=error;sourcepath=test.md;linenumber=10;columnnumber=4]Test error'
+        }
+    }
+
+    Context 'In local environment' {
+        BeforeEach {
+            Clear-MockCIEnvironment
+        }
+
+        It 'Does not throw when emitting annotations' {
+            $summary = [pscustomobject]@{
+                Results = @(
+                    [pscustomobject]@{
+                        RelativePath = 'test.md'
+                        Issues = @(
+                            [pscustomobject]@{ Type = 'Warning'; Message = 'Test warning'; Line = 2 }
+                        )
+                    }
+                )
+            }
+
+            { Write-CIAnnotations -Summary $summary } | Should -Not -Throw
+        }
+    }
+
+    Context 'With no issues' {
+        BeforeEach {
+            Clear-MockCIEnvironment
+        }
+
+        It 'Returns nothing when no issues exist' {
+            $summary = [pscustomobject]@{
+                Results = @(
+                    [pscustomobject]@{ RelativePath = 'test.md'; Issues = @() }
+                )
+            }
+
+            $output = Write-CIAnnotations -Summary $summary
+            $output | Should -BeNullOrEmpty
+        }
+    }
+}
+
+Describe 'Set-CITaskResult' -Tag 'Unit' {
+    BeforeAll {
+        Save-CIEnvironment
+    }
+
+    AfterAll {
+        Restore-CIEnvironment
+    }
+
+    Context 'In GitHub Actions environment' {
+        BeforeEach {
+            $script:mockFiles = Initialize-MockCIEnvironment
+        }
+
+        AfterEach {
+            Remove-MockCIFiles -MockFiles $script:mockFiles
         }
 
         It 'Outputs error for Failed result' {
@@ -504,7 +690,7 @@ Describe 'Set-CITaskResult' -Tag 'Unit' {
 
     Context 'In Azure DevOps environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:TF_BUILD = 'True'
         }
 
@@ -526,7 +712,7 @@ Describe 'Set-CITaskResult' -Tag 'Unit' {
 
     Context 'In local environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
         }
 
         It 'Does not produce console output' {
@@ -538,22 +724,22 @@ Describe 'Set-CITaskResult' -Tag 'Unit' {
 
 Describe 'Publish-CIArtifact' -Tag 'Unit' {
     BeforeAll {
-        Save-GitHubEnvironment
+        Save-CIEnvironment
     }
 
     AfterAll {
-        Restore-GitHubEnvironment
+        Restore-CIEnvironment
     }
 
     Context 'In GitHub Actions environment' {
         BeforeEach {
-            $script:mockFiles = Initialize-MockGitHubEnvironment
+            $script:mockFiles = Initialize-MockCIEnvironment
             $script:tempArtifact = Join-Path ([System.IO.Path]::GetTempPath()) 'test-artifact.txt'
             'artifact content' | Set-Content -Path $script:tempArtifact
         }
 
         AfterEach {
-            Remove-MockGitHubFiles -MockFiles $script:mockFiles
+            Remove-MockCIFiles -MockFiles $script:mockFiles
             Remove-Item -Path $script:tempArtifact -Force -ErrorAction SilentlyContinue
         }
 
@@ -567,7 +753,7 @@ Describe 'Publish-CIArtifact' -Tag 'Unit' {
 
     Context 'In Azure DevOps environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:TF_BUILD = 'True'
             $script:tempArtifact = Join-Path ([System.IO.Path]::GetTempPath()) 'test-artifact.txt'
             'artifact content' | Set-Content -Path $script:tempArtifact
@@ -590,7 +776,7 @@ Describe 'Publish-CIArtifact' -Tag 'Unit' {
 
     Context 'With non-existent path' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $env:TF_BUILD = 'True'
         }
 
@@ -608,7 +794,7 @@ Describe 'Publish-CIArtifact' -Tag 'Unit' {
 
     Context 'In local environment' {
         BeforeEach {
-            Clear-MockGitHubEnvironment
+            Clear-MockCIEnvironment
             $script:tempArtifact = Join-Path ([System.IO.Path]::GetTempPath()) 'test-artifact.txt'
             'artifact content' | Set-Content -Path $script:tempArtifact
         }

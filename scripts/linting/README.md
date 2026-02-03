@@ -21,7 +21,8 @@ The linting scripts follow a **modular architecture** with shared helper functio
 
 * **Wrapper Scripts** (`Invoke-*.ps1`) - Entry points that orchestrate validation logic
 * **Core Scripts** - Existing validation logic (e.g., `Link-Lang-Check.ps1`, `Validate-MarkdownFrontmatter.ps1`)
-* **Shared Module** (`Modules/LintingHelpers.psm1`) - Common functions for GitHub Actions integration
+* **Shared Module** (`Modules/LintingHelpers.psm1`) - Common functions for file discovery and git operations
+* **CI Helpers** (`scripts/lib/Modules/CIHelpers.psm1`) - CI annotations, outputs, env flags, and step summaries
 * **Configuration Files** - Tool-specific settings (e.g., `PSScriptAnalyzer.psd1`, `markdown-link-check.config.json`)
 
 ## Scripts
@@ -38,7 +39,7 @@ Static analysis for PowerShell scripts using PSScriptAnalyzer.
 
 * Detects changed PowerShell files via Git
 * Supports analyzing all files or changed files only
-* Creates GitHub Actions annotations for violations
+* Creates CI annotations for violations
 * Exports JSON results and markdown summary
 * Configurable via `PSScriptAnalyzer.psd1`
 
@@ -94,7 +95,7 @@ Static analysis for GitHub Actions workflow files using actionlint.
 * Validates `.github/workflows/*.yml` and `.yaml` files
 * Detects changed workflow files via Git
 * Supports analyzing all files or changed files only
-* Creates GitHub Actions annotations for violations
+* Creates CI annotations for violations
 * Exports JSON results and markdown summary
 * Configurable via `.github/actionlint.yaml`
 
@@ -138,7 +139,7 @@ Validates YAML frontmatter and footer format in markdown files.
 * Checks footer format and copyright notice
 * Supports changed files only mode
 * Configurable warnings-as-errors
-* Creates GitHub Actions annotations for all issues
+* Creates CI annotations for all issues
 * Exports JSON results with detailed statistics
 * Generates comprehensive step summary
 
@@ -185,7 +186,7 @@ Detects URLs with language paths (e.g., `/en-us/`) that should be removed.
 
 * Scans all markdown files recursively
 * Calls `Link-Lang-Check.ps1` for detection logic
-* Creates GitHub Actions warning annotations
+* Creates CI warning annotations
 * Provides fix instructions in summary
 
 **Usage**:
@@ -222,7 +223,7 @@ Validates all links in markdown files using markdown-link-check npm package.
 * Configurable via `markdown-link-check.config.json`
 * Retries failed links
 * Respects robots.txt
-* Creates GitHub Actions annotations for broken links
+* Creates CI annotations for broken links
 * Exports JSON results with link statistics
 * Generates detailed step summary
 
@@ -245,7 +246,7 @@ Validates all links in markdown files using markdown-link-check npm package.
 
 ### `Modules/LintingHelpers.psm1`
 
-Common helper functions for GitHub Actions integration and file operations.
+Common helper functions for file discovery and git operations.
 
 **Exported Functions**:
 
@@ -284,41 +285,55 @@ Loads and parses `.gitignore` file.
 
 **Returns**: Array of ignore patterns
 
-#### `Write-GitHubAnnotation`
+### `scripts/lib/Modules/CIHelpers.psm1`
 
-Creates GitHub Actions annotation.
+CI helper functions for annotations, outputs, environment flags, and summaries.
+
+**Exported Functions**:
+
+#### `Write-CIAnnotation`
+
+Creates a CI annotation.
 
 **Parameters**:
 
-* `-Type` ('error'|'warning'|'notice') - Annotation severity
+* `-Level` ('Error'|'Warning'|'Notice') - Annotation severity
 * `-Message` (string) - Annotation text
 * `-File` (string, optional) - File path
 * `-Line` (int, optional) - Line number
 * `-Column` (int, optional) - Column number
 
-**Output**: GitHub Actions annotation command
+**Output**: CI annotation command
 
-#### `Set-GitHubOutput`
+#### `Write-CIAnnotations`
 
-Sets GitHub Actions output variable.
+Writes CI annotations from a validation summary.
+
+**Parameters**:
+
+* `-Summary` (ValidationSummary) - Validation results to annotate
+
+#### `Set-CIOutput`
+
+Sets a CI output variable.
 
 **Parameters**:
 
 * `-Name` (string) - Variable name
 * `-Value` (string) - Variable value
 
-#### `Set-GitHubEnv`
+#### `Set-CIEnv`
 
-Sets GitHub Actions environment variable.
+Sets a CI environment variable.
 
 **Parameters**:
 
 * `-Name` (string) - Variable name
 * `-Value` (string) - Variable value
 
-#### `Write-GitHubStepSummary`
+#### `Write-CIStepSummary`
 
-Appends content to GitHub Actions step summary.
+Appends content to the CI step summary.
 
 **Parameters**:
 
@@ -333,13 +348,13 @@ Import-Module ./Modules/LintingHelpers.psm1
 $files = Get-ChangedFilesFromGit -FileExtension '.ps1'
 
 # Create error annotation
-Write-GitHubAnnotation -Type 'error' -Message 'Syntax error' -File 'script.ps1' -Line 42
+Write-CIAnnotation -Level 'Error' -Message 'Syntax error' -File 'script.ps1' -Line 42
 
 # Set output variable
-Set-GitHubOutput -Name 'files-analyzed' -Value $files.Count
+Set-CIOutput -Name 'files-analyzed' -Value $files.Count
 
 # Add to step summary
-Write-GitHubStepSummary -Content "## Results`n`nAnalyzed $($files.Count) files"
+Write-CIStepSummary -Content "## Results`n`nAnalyzed $($files.Count) files"
 ```
 
 ## Configuration Files
@@ -403,7 +418,7 @@ See [GitHub Workflows Documentation](../../.github/workflows/README.md) for deta
 To add a new linting script:
 
 1. **Create wrapper script** following `Invoke-*.ps1` naming convention
-2. **Import LintingHelpers module** for GitHub Actions integration
+2. **Import LintingHelpers and CIHelpers modules** for file discovery and CI integration
 3. **Implement core validation logic** with clear error reporting
 4. **Support common parameters**: `-Verbose`, `-Debug`, `-ChangedFilesOnly` (if applicable)
 5. **Create GitHub Actions workflow** in `.github/workflows/`
@@ -437,6 +452,7 @@ param(
 # Import shared helpers
 $scriptPath = $PSScriptRoot
 Import-Module "$scriptPath/Modules/LintingHelpers.psm1" -Force
+Import-Module "$scriptPath/../lib/Modules/CIHelpers.psm1" -Force
 
 # Main validation logic
 Write-Host "🔍 Running MyValidator..."
@@ -458,14 +474,12 @@ foreach ($file in $files) {
     # Validation logic here
     if ($issue) {
         $issues += $issue
-        Write-GitHubAnnotation -Type 'error' -Message 'Issue found' -File $file
+        Write-CIAnnotation -Level 'Error' -Message 'Issue found' -File $file
     }
 }
 
 # Export results
-if ($env:GITHUB_ACTIONS) {
-    Write-GitHubStepSummary -Content "## Validation Results`n`nFound $($issues.Count) issues"
-}
+Write-CIStepSummary -Content "## Validation Results`n`nFound $($issues.Count) issues"
 
 if ($issues.Count -gt 0) {
     Write-Host "❌ Found $($issues.Count) issues"
@@ -481,7 +495,7 @@ exit 0
 When modifying linting scripts:
 
 1. Follow PowerShell best practices (PSScriptAnalyzer compliant)
-2. Maintain GitHub Actions integration patterns
+2. Maintain CI integration patterns
 3. Keep scripts testable locally without GitHub Actions
 4. Update documentation in README files
 5. Test thoroughly before creating PR
