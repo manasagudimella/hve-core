@@ -64,8 +64,32 @@ Add an **External References** section to work item descriptions when authoritat
 
 **Git context** (when `${input:includeBranchChanges}` is `true` and no documents exist):
 
-* `run_in_terminal`: Generate diff XML via `scripts/dev-tools/pr-ref-gen.sh --base-branch "${input:baseBranch}" --output "<planning-folder>/git-branch-diff.xml"`
 * Sync remote first: `git fetch <remote> <branch> --prune`
+* `run_in_terminal`: Generate diff XML using environment-specific fallback patterns:
+
+  **For Unix-like shells (bash/zsh)**:
+
+  ```bash
+  # Try local first, then extension
+  SCRIPT_PATH="./scripts/dev-tools/pr-ref-gen.sh"
+  if [ ! -f "$SCRIPT_PATH" ]; then
+    SCRIPT_PATH=$(find ~/.vscode*/extensions -name "pr-ref-gen.sh" 2>/dev/null | head -1)
+  fi
+  
+  "$SCRIPT_PATH" --base-branch "${input:baseBranch}" --output "<planning-folder>/git-branch-diff.xml"
+  ```
+
+  **For Windows PowerShell**:
+
+  ```powershell
+  # Try local first, then extension
+  $ScriptPath = "./scripts/dev-tools/Generate-PrReference.ps1"
+  if (-not (Test-Path $ScriptPath)) {
+    $ScriptPath = Get-ChildItem -Path "$HOME/.vscode*/extensions" -Filter "Generate-PrReference.ps1" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+  }
+  
+  pwsh -File $ScriptPath -BaseBranch "${input:baseBranch}" -Output "<planning-folder>/git-branch-diff.xml"
+  ```
 
 **Workspace utilities**: `list_dir`, `read_file`, `grep_search` for artifact location.
 

@@ -60,6 +60,32 @@ Git operations via `run_in_terminal`:
 
 Workspace utilities: `list_dir`, `read_file`, `grep_search`
 
+**Script path resolution**: Use environment-specific fallback patterns.
+
+**For Unix-like shells (bash/zsh)**:
+
+```bash
+# Try local first, then extension
+SCRIPT_PATH="./scripts/dev-tools/pr-ref-gen.sh"
+if [ ! -f "$SCRIPT_PATH" ]; then
+  SCRIPT_PATH=$(find ~/.vscode*/extensions -name "pr-ref-gen.sh" 2>/dev/null | head -1)
+fi
+
+"$SCRIPT_PATH" --base-branch origin/main --output pr-reference.xml
+```
+
+**For Windows PowerShell**:
+
+```powershell
+# Try local first, then extension
+$ScriptPath = "./scripts/dev-tools/Generate-PrReference.ps1"
+if (-not (Test-Path $ScriptPath)) {
+  $ScriptPath = Get-ChildItem -Path "$HOME/.vscode*/extensions" -Filter "Generate-PrReference.ps1" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+}
+
+pwsh -File $ScriptPath -BaseBranch origin/main -Output pr-reference.xml
+```
+
 Persist all tool output into planning files per ado-wit-planning.instructions.md.
 
 ## Tracking Directory Structure

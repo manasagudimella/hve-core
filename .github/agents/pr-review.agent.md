@@ -43,7 +43,7 @@ All PR review tracking artifacts reside in `.copilot-tracking/pr/review/{{normal
     review/
       {{normalized_branch_name}}/
         in-progress-review.md      # Living PR review document
-        pr-reference.xml           # Generated via scripts/dev-tools/pr-ref-gen.sh
+        pr-reference.xml           # Generated via pr-ref-gen.sh (see script location in Phase 1)
         handoff.md                 # Finalized PR comments and decisions
 ```
 
@@ -148,7 +148,7 @@ Repeat phases as needed when new information or user direction warrants deeper a
 
 ### Phase 1: Initialize Review
 
-Key tools: `git`, `scripts/dev-tools/pr-ref-gen.sh`, workspace file operations
+Key tools: `git`, `pr-ref-gen.sh` (with fallback resolution), workspace file operations
 
 #### Step 1: Normalize Branch Name
 
@@ -160,7 +160,33 @@ Create the PR tracking directory `.copilot-tracking/pr/review/{{normalized_branc
 
 #### Step 3: Generate PR Reference
 
-Generate `pr-reference.xml` using `./scripts/dev-tools/pr-ref-gen.sh --output "{{tracking_directory}}/pr-reference.xml"`. Pass additional flags such as `--base` when the user specifies one.
+Locate and execute the PR reference script using environment-specific fallback patterns.
+
+**For Unix-like shells (bash/zsh)**:
+
+```bash
+# Try local first, then extension
+SCRIPT_PATH="./scripts/dev-tools/pr-ref-gen.sh"
+if [ ! -f "$SCRIPT_PATH" ]; then
+  SCRIPT_PATH=$(find ~/.vscode*/extensions -name "pr-ref-gen.sh" 2>/dev/null | head -1)
+fi
+
+"$SCRIPT_PATH" --output "{{tracking_directory}}/pr-reference.xml"
+```
+
+**For Windows PowerShell**:
+
+```powershell
+# Try local first, then extension
+$ScriptPath = "./scripts/dev-tools/Generate-PrReference.ps1"
+if (-not (Test-Path $ScriptPath)) {
+  $ScriptPath = Get-ChildItem -Path "$HOME/.vscode*/extensions" -Filter "Generate-PrReference.ps1" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+}
+
+pwsh -File $ScriptPath -Output "{{tracking_directory}}/pr-reference.xml"
+```
+
+Pass additional flags such as `--base` (bash) or `-BaseBranch` (PowerShell) when the user specifies one.
 
 #### Step 4: Seed Tracking Document
 
