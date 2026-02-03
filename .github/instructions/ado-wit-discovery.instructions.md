@@ -76,6 +76,11 @@ Add an **External References** section to work item descriptions when authoritat
     SCRIPT_PATH=$(find ~/.vscode*/extensions -name "pr-ref-gen.sh" 2>/dev/null | head -1)
   fi
   
+  if [ -z "$SCRIPT_PATH" ] || [ ! -f "$SCRIPT_PATH" ]; then
+    echo "Error: pr-ref-gen.sh not found. Checked ./scripts/dev-tools and VS Code extensions under ~/.vscode*/extensions." >&2
+    exit 1
+  fi
+  
   "$SCRIPT_PATH" --base-branch "${input:baseBranch}" --output "<planning-folder>/git-branch-diff.xml"
   ```
 
@@ -88,7 +93,16 @@ Add an **External References** section to work item descriptions when authoritat
     $ScriptPath = Get-ChildItem -Path "$HOME/.vscode*/extensions" -Filter "Generate-PrReference.ps1" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
   }
   
-  pwsh -File $ScriptPath -BaseBranch "${input:baseBranch}" -Output "<planning-folder>/git-branch-diff.xml"
+  if (-not $ScriptPath) {
+    Write-Error "Error: Generate-PrReference.ps1 not found. Checked ./scripts/dev-tools and VS Code extensions under ~/.vscode*/extensions."
+    exit 1
+  }
+  
+  # Generate reference to default location
+  pwsh -File $ScriptPath -BaseBranch "${input:baseBranch}"
+  
+  # Move generated file to planning folder
+  Move-Item -Path ".copilot-tracking/pr/pr-reference.xml" -Destination "<planning-folder>/git-branch-diff.xml" -Force
   ```
 
 **Workspace utilities**: `list_dir`, `read_file`, `grep_search` for artifact location.

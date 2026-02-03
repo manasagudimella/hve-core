@@ -23,6 +23,22 @@ extension/
 └── PACKAGING.md          # This file
 ```
 
+## Extension Configuration
+
+### Extension Kind
+
+The extension is configured with `"extensionKind": ["workspace", "ui"]` in `package.json` to support multiple execution contexts:
+
+* **Workspace mode**: Extension runs in the workspace extension host with access to local workspace files, including scripts in `.github/` and `scripts/dev-tools/`
+* **UI mode**: Extension runs in the UI extension host for scenarios where workspace access is restricted
+
+This dual-mode configuration enables script fallback patterns where:
+
+1. Local workspace scripts (e.g., `./scripts/dev-tools/pr-ref-gen.sh`) are used when available
+2. Extension-bundled scripts fall back when workspace access is unavailable (e.g., remote development scenarios)
+
+The configuration ensures the extension works correctly in local workspaces, devcontainers, Codespaces, and other VS Code environments.
+
 ## Prerequisites
 
 Install the VS Code Extension Manager CLI:
@@ -65,11 +81,11 @@ npm run extension:prepare
 
 The preparation script automatically:
 
-- Discovers and registers all chat agents from `.github/agents/`
-- Discovers and registers all prompts from `.github/prompts/`
-- Discovers and registers all instruction files from `.github/instructions/`
-- Updates `package.json` with discovered components
-- Uses existing version from `package.json` (does not modify it)
+* Discovers and registers all chat agents from `.github/agents/`
+* Discovers and registers all prompts from `.github/prompts/`
+* Discovers and registers all instruction files from `.github/instructions/`
+* Updates `package.json` with discovered components
+* Uses existing version from `package.json` (does not modify it)
 
 #### Step 2: Package the Extension
 
@@ -94,13 +110,13 @@ pwsh ./scripts/extension/Package-Extension.ps1 -Version "1.1.0" -DevPatchNumber 
 
 The packaging script automatically:
 
-- Uses version from `package.json` (or specified version)
-- Optionally appends dev patch number for pre-release builds
-- Copies required `.github` directory
-- Copies `scripts/dev-tools` directory (developer utilities)
-- Packages the extension using `vsce`
-- Cleans up temporary files
-- Restores original `package.json` version if temporarily modified
+* Uses version from `package.json` (or specified version)
+* Optionally appends dev patch number for pre-release builds
+* Copies required `.github` directory
+* Copies `scripts/dev-tools` directory (developer utilities)
+* Packages the extension using `vsce`
+* Cleans up temporary files
+* Restores original `package.json` version if temporarily modified
 
 ### Manual Packaging (Legacy)
 
@@ -145,15 +161,15 @@ vsce publish --packagePath "$VSIX_FILE"
 
 The `extension/.vscodeignore` file controls what gets packaged. Currently included:
 
-- `.github/agents/**` - All custom agent definitions
-- `.github/prompts/**` - All prompt templates
-- `.github/instructions/**` - All instruction files
-- `docs/templates/**` - Document templates used by agents (ADR, BRD, Security Plan)
-- `scripts/dev-tools/**` - Developer utilities (PR reference generation)
-- `package.json` - Extension manifest
-- `README.md` - Extension description
-- `LICENSE` - License file
-- `CHANGELOG.md` - Version history
+* `.github/agents/**` - All custom agent definitions
+* `.github/prompts/**` - All prompt templates
+* `.github/instructions/**` - All instruction files
+* `docs/templates/**` - Document templates used by agents (ADR, BRD, Security Plan)
+* `scripts/dev-tools/**` - Developer utilities (PR reference generation)
+* `package.json` - Extension manifest
+* `README.md` - Extension description
+* `LICENSE` - License file
+* `CHANGELOG.md` - Version history
 
 ## Testing Locally
 
@@ -243,11 +259,11 @@ See [Agent Maturity Levels](../docs/contributing/ai-artifacts-common.md#maturity
 
 ## Notes
 
-- The `.github`, `docs/templates`, and `scripts/dev-tools` folders are temporarily copied during packaging (not permanently stored)
-- `LICENSE` and `CHANGELOG.md` are copied from root during packaging and excluded from git
-- Only essential extension files are included (agents, prompts, instructions, templates, dev-tools)
-- Non-essential files are excluded (workflows, issue templates, agent installer, etc.)
-- The root `package.json` contains development scripts for the repository
+* The `.github`, `docs/templates`, and `scripts/dev-tools` folders are temporarily copied during packaging (not permanently stored)
+* `LICENSE` and `CHANGELOG.md` are copied from root during packaging and excluded from git
+* Only essential extension files are included (agents, prompts, instructions, templates, dev-tools)
+* Non-essential files are excluded (workflows, issue templates, agent installer, etc.)
+* The root `package.json` contains development scripts for the repository
 
 ---
 

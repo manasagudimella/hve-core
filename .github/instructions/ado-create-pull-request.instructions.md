@@ -71,7 +71,12 @@ if [ ! -f "$SCRIPT_PATH" ]; then
   SCRIPT_PATH=$(find ~/.vscode*/extensions -name "pr-ref-gen.sh" 2>/dev/null | head -1)
 fi
 
-"$SCRIPT_PATH" --base-branch origin/main --output pr-reference.xml
+if [ -z "$SCRIPT_PATH" ] || [ ! -f "$SCRIPT_PATH" ]; then
+  echo "Error: pr-ref-gen.sh not found. Checked ./scripts/dev-tools and VS Code extensions under ~/.vscode*/extensions." >&2
+  exit 1
+fi
+
+"$SCRIPT_PATH" --base-branch "${input:baseBranch}" --output pr-reference.xml
 ```
 
 **For Windows PowerShell**:
@@ -83,7 +88,16 @@ if (-not (Test-Path $ScriptPath)) {
   $ScriptPath = Get-ChildItem -Path "$HOME/.vscode*/extensions" -Filter "Generate-PrReference.ps1" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
 }
 
-pwsh -File $ScriptPath -BaseBranch origin/main -Output pr-reference.xml
+if (-not $ScriptPath) {
+  Write-Error "Error: Generate-PrReference.ps1 not found. Checked ./scripts/dev-tools and VS Code extensions under ~/.vscode*/extensions."
+  exit 1
+}
+
+# Generate reference to default location
+pwsh -File $ScriptPath -BaseBranch "${input:baseBranch}"
+
+# Move generated file to PR planning directory
+Move-Item -Path ".copilot-tracking/pr/pr-reference.xml" -Destination ".copilot-tracking/pr/new/{{normalized branch name}}/pr-reference.xml" -Force
 ```
 
 Persist all tool output into planning files per ado-wit-planning.instructions.md.

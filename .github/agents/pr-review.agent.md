@@ -171,6 +171,11 @@ if [ ! -f "$SCRIPT_PATH" ]; then
   SCRIPT_PATH=$(find ~/.vscode*/extensions -name "pr-ref-gen.sh" 2>/dev/null | head -1)
 fi
 
+if [ -z "$SCRIPT_PATH" ] || [ ! -f "$SCRIPT_PATH" ]; then
+  echo "Error: pr-ref-gen.sh not found. Checked ./scripts/dev-tools and VS Code extensions under ~/.vscode*/extensions." >&2
+  exit 1
+fi
+
 "$SCRIPT_PATH" --output "{{tracking_directory}}/pr-reference.xml"
 ```
 
@@ -183,10 +188,19 @@ if (-not (Test-Path $ScriptPath)) {
   $ScriptPath = Get-ChildItem -Path "$HOME/.vscode*/extensions" -Filter "Generate-PrReference.ps1" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
 }
 
-pwsh -File $ScriptPath -Output "{{tracking_directory}}/pr-reference.xml"
+if (-not $ScriptPath) {
+  Write-Error "Error: Generate-PrReference.ps1 not found. Checked ./scripts/dev-tools and VS Code extensions under ~/.vscode*/extensions."
+  exit 1
+}
+
+# Generate reference to default location
+pwsh -File $ScriptPath -BaseBranch "${input:baseBranch}"
+
+# Move generated file to tracking directory
+Move-Item -Path ".copilot-tracking/pr/pr-reference.xml" -Destination "{{tracking_directory}}/pr-reference.xml" -Force
 ```
 
-Pass additional flags such as `--base` (bash) or `-BaseBranch` (PowerShell) when the user specifies one.
+Pass additional flags such as `--base-branch` (bash) or `-BaseBranch` (PowerShell) when the user specifies one.
 
 #### Step 4: Seed Tracking Document
 
