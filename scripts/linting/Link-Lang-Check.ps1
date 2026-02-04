@@ -376,7 +376,7 @@ if (-not $script:SkipMain) {
         exit 0
     }
     catch {
-        Write-Error "Link Lang Check failed: $($_.Exception.Message)"
+        Write-Error -ErrorAction Continue "Link Lang Check failed: $($_.Exception.Message)"
         Write-CIAnnotation -Message "Link Lang Check failed: $($_.Exception.Message)" -Level Error
         exit 1
     }

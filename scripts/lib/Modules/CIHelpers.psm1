@@ -226,9 +226,16 @@ function Set-CIEnv {
     switch ($platform) {
         'github' {
             if ($env:GITHUB_ENV) {
-                $escapedName = ConvertTo-GitHubActionsEscaped -Value $Name
-                $escapedValue = ConvertTo-GitHubActionsEscaped -Value $Value
-                "$escapedName=$escapedValue" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+                if ($Name -notmatch '^[A-Za-z_][A-Za-z0-9_]*$') {
+                    throw "Invalid GitHub Actions environment variable name: '$Name'. Names must match '^[A-Za-z_][A-Za-z0-9_]*\$'."
+                }
+
+                $delimiter = "EOF_$([guid]::NewGuid().ToString('N'))"
+                @(
+                    "$Name<<$delimiter"
+                    $Value
+                    $delimiter
+                ) | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
             }
             else {
                 Write-Verbose "GITHUB_ENV not set, would set: $Name=$Value"

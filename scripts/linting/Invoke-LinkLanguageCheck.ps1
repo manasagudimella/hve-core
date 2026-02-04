@@ -131,7 +131,7 @@ No URLs with language-specific paths detected.
         return 0
     }
     catch {
-        Write-Error "Link-language check failed: $($_.Exception.Message)"
+        Write-Error -ErrorAction Continue "Link-language check failed: $($_.Exception.Message)"
         Write-CIAnnotation -Message "Link-language check failed: $($_.Exception.Message)" -Level Error
         return 1
     }

@@ -950,7 +950,7 @@ if (-not $script:SkipMain) {
         exit 0  # All good
     }
     catch {
-        Write-Error "Test SHA Staleness failed: $($_.Exception.Message)"
+        Write-Error -ErrorAction Continue "Test SHA Staleness failed: $($_.Exception.Message)"
         Write-CIAnnotation -Message $_.Exception.Message -Level Error
         exit 1
     }

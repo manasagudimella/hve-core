@@ -236,13 +236,21 @@ Describe 'Set-CIEnv' -Tag 'Unit' {
         It 'Writes environment variable to GITHUB_ENV file' {
             Set-CIEnv -Name 'TEST_VAR' -Value 'test-value'
             $content = Get-Content -Path $env:GITHUB_ENV -Raw
-            $content | Should -Match 'TEST_VAR=test-value'
+            $content | Should -Match 'TEST_VAR<<EOF_[a-f0-9]+'
+            $content | Should -Match 'test-value'
         }
 
-        It 'Escapes newlines in environment variable value' {
+        It 'Preserves newlines in environment variable value using delimiter format' {
             Set-CIEnv -Name 'TEST_VAR' -Value "line1`nline2"
             $content = Get-Content -Path $env:GITHUB_ENV -Raw
-            $content | Should -Match 'line1%0Aline2'
+            $content | Should -Match 'line1'
+            $content | Should -Match 'line2'
+            $content | Should -Not -Match '%0A'
+        }
+
+        It 'Rejects invalid variable names' {
+            { Set-CIEnv -Name 'invalid-name' -Value 'test' } | Should -Throw -ExpectedMessage '*Invalid GitHub Actions environment variable name*'
+            { Set-CIEnv -Name '123start' -Value 'test' } | Should -Throw
         }
     }
 
@@ -253,8 +261,8 @@ Describe 'Set-CIEnv' -Tag 'Unit' {
         }
 
         It 'Outputs task.setvariable format' {
-            $output = Set-CIEnv -Name 'test-var' -Value 'test-value'
-            $output | Should -Be '##vso[task.setvariable variable=test-var]test-value'
+            $output = Set-CIEnv -Name 'test_var' -Value 'test-value'
+            $output | Should -Be '##vso[task.setvariable variable=test_var]test-value'
         }
 
         It 'Escapes semicolons in variable name to prevent property injection' {
@@ -269,7 +277,7 @@ Describe 'Set-CIEnv' -Tag 'Unit' {
         }
 
         It 'Does not produce console output' {
-            $output = Set-CIEnv -Name 'test-var' -Value 'test-value'
+            $output = Set-CIEnv -Name 'test_var' -Value 'test-value'
             $output | Should -BeNullOrEmpty
         }
     }
@@ -281,7 +289,7 @@ Describe 'Set-CIEnv' -Tag 'Unit' {
         }
 
         It 'Handles missing GITHUB_ENV gracefully' {
-            { Set-CIEnv -Name 'test-var' -Value 'test-value' } | Should -Not -Throw
+            { Set-CIEnv -Name 'test_var' -Value 'test-value' } | Should -Not -Throw
         }
     }
 }

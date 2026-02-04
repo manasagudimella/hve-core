@@ -780,7 +780,7 @@ try {
     }
 }
 catch {
-    Write-Error "Validate Markdown Frontmatter failed: $($_.Exception.Message)"
+    Write-Error -ErrorAction Continue "Validate Markdown Frontmatter failed: $($_.Exception.Message)"
     Write-CIAnnotation -Message "Validate Markdown Frontmatter failed: $($_.Exception.Message)" -Level Error
     exit 1
 }

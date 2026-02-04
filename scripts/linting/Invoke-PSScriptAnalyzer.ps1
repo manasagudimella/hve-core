@@ -159,7 +159,7 @@ try {
     }
 }
 catch {
-    Write-Error "PSScriptAnalyzer failed: $($_.Exception.Message)"
+    Write-Error -ErrorAction Continue "PSScriptAnalyzer failed: $($_.Exception.Message)"
     Write-CIAnnotation -Message "PSScriptAnalyzer failed: $($_.Exception.Message)" -Level Error
     exit 1
 }

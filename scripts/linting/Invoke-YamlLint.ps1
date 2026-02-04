@@ -179,7 +179,7 @@ try {
     }
 }
 catch {
-    Write-Error "YAML Lint failed: $($_.Exception.Message)"
+    Write-Error -ErrorAction Continue "YAML Lint failed: $($_.Exception.Message)"
     Write-CIAnnotation -Message "YAML Lint failed: $($_.Exception.Message)" -Level Error
     exit 1
 }
