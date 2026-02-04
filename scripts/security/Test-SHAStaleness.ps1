@@ -951,10 +951,7 @@ if (-not $script:SkipMain) {
     }
     catch {
         Write-Error "Test SHA Staleness failed: $($_.Exception.Message)"
-        if ($env:GITHUB_ACTIONS -eq 'true') {
-            $escapedMsg = ConvertTo-GitHubActionsEscaped -Value $_.Exception.Message
-            Write-Output "::error::$escapedMsg"
-        }
+        Write-CIAnnotation -Message $_.Exception.Message -Level Error
         exit 1
     }
 }

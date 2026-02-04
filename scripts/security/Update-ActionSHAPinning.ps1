@@ -1017,10 +1017,7 @@ if (-not $script:SkipMain) {
     }
     catch {
         Write-SecurityLog "Critical error in SHA pinning process: $($_.Exception.Message)" -Level 'Error'
-        if ($env:GITHUB_ACTIONS -eq 'true') {
-            $escapedMsg = ConvertTo-GitHubActionsEscaped -Value $_.Exception.Message
-            Write-Output "::error::$escapedMsg"
-        }
+        Write-CIAnnotation -Message $_.Exception.Message -Level Error
         exit 1
     }
 }
