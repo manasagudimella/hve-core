@@ -473,15 +473,16 @@ function Copy-CollectionArtifacts {
     .DESCRIPTION
         Reads the prepared package.json to determine which artifacts were selected
         by collection filtering, then copies only those files instead of the entire
-        .github directory. Always includes copilot-instructions.md.
+        .github directory.
     .PARAMETER RepoRoot
         Absolute path to the repository root.
     .PARAMETER ExtensionDirectory
         Absolute path to the extension directory.
     .PARAMETER PrepareResult
-        Result hashtable from Invoke-PrepareExtension (unused directly, kept for API consistency).
+        Result hashtable from Invoke-PrepareExtension. Reserved for future collection metadata handling.
     #>
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'PrepareResult', Justification = 'Reserved for future collection metadata handling')]
     param(
         [Parameter(Mandatory = $true)]
         [string]$RepoRoot,
@@ -542,15 +543,6 @@ function Copy-CollectionArtifacts {
                 Copy-Item -Path $srcPath -Destination $destPath -Recurse -Force
             }
         }
-    }
-
-    # Always copy copilot-instructions.md (needed by all collections)
-    $copilotInstr = Join-Path $RepoRoot ".github/copilot-instructions.md"
-    $copilotDest = Join-Path $ExtensionDirectory ".github/copilot-instructions.md"
-    if (Test-Path $copilotInstr) {
-        $copilotDestDir = Split-Path $copilotDest -Parent
-        New-Item -Path $copilotDestDir -ItemType Directory -Force | Out-Null
-        Copy-Item -Path $copilotInstr -Destination $copilotDest -Force
     }
 }
 
@@ -798,13 +790,6 @@ function Invoke-PackageExtension {
             $packageJson | ConvertTo-Json -Depth 10 | Set-Content -Path $PackageJsonPath -Encoding UTF8NoBOM
             Write-Host "   Version: $originalVersion -> $packageVersion" -ForegroundColor Green
             $versionWasModified = $true
-        }
-
-        # Extract collection ID for output naming
-        $collectionId = $null
-        if ($Collection -and $Collection -ne "") {
-            $collectionContent = Get-Content -Path $Collection -Raw | ConvertFrom-Json
-            $collectionId = $collectionContent.id
         }
 
         # Handle changelog if provided
