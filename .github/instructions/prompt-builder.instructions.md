@@ -1,7 +1,6 @@
 ---
 description: 'Authoring standards for prompt engineering artifacts including file types, protocol patterns, writing style, and quality criteria - Brought to you by microsoft/hve-core'
 applyTo: '**/*.prompt.md, **/*.agent.md, **/*.instructions.md, **/SKILL.md'
-maturity: stable
 ---
 
 # Prompt Builder Instructions

@@ -1,7 +1,6 @@
 ---
 description: 'Provides prompt instructions for pull request (PR) generation - Brought to you by microsoft/edge-ai'
 agent: agent
-maturity: stable
 ---
 
 # Pull Request (PR) Generation Instructions
