@@ -162,7 +162,7 @@ Deduplicate issue numbers and preserve the action prefix from the first occurren
 After detecting GHCP files from Change Type Detection, look up maturity levels from the AI Artifacts Registry:
 
 1. For each file matching `.instructions.md`, `.prompt.md`, or `.agent.md` patterns:
-   * Derive the artifact key from the file path (filename without extension pattern)
+   * Derive the artifact key from the file path by removing the extension pattern (e.g., `pull-request.prompt.md` → `pull-request`, `bash/bash.instructions.md` → `bash/bash`)
    * Look up the artifact's `maturity` value in `.github/ai-artifacts-registry.json`
    * Default to `stable` if the artifact is not found in the registry
 
