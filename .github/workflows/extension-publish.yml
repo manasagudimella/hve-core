@@ -151,13 +151,17 @@ jobs:
           path: ./dist
 
       - name: Publish to VS Code Marketplace
+        id: publish
         run: |
           VSIX_FILE=$(find dist -name '*.vsix' -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2)
           if [ -z "$VSIX_FILE" ]; then
             echo "::error::No VSIX file found for collection ${{ matrix.id }}"
             exit 1
           fi
-          echo "📦 Publishing ${{ matrix.id }}: $VSIX_FILE"
+          # Extract version from VSIX filename to avoid depending on matrix job output
+          VSIX_VERSION=$(basename "$VSIX_FILE" .vsix | grep -oE '[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$')
+          echo "version=$VSIX_VERSION" >> "$GITHUB_OUTPUT"
+          echo "📦 Publishing ${{ matrix.id }}: $VSIX_FILE (v$VSIX_VERSION)"
           vsce publish --packagePath "$VSIX_FILE" --azure-credential
 
       - name: Summary
@@ -166,7 +170,7 @@ jobs:
             echo "## 🎉 Extension Published: ${{ matrix.name }}"
             echo ""
             echo "**Collection:** ${{ matrix.id }}"
-            echo "**Version:** ${{ needs.package.outputs.version }}"
+            echo "**Version:** ${{ steps.publish.outputs.version }}"
             echo ""
             echo "View on [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=ise-hve-essentials.${{ matrix.name }})"
           } >> "$GITHUB_STEP_SUMMARY"
