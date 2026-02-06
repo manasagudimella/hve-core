@@ -269,7 +269,12 @@
         "rpi-agent": {
             "maturity": "stable",
             "personas": [
-                "hve-core-all"
+                "hve-core-all",
+                "developer",
+                "tpm",
+                "devops",
+                "architect",
+                "technical-writer"
             ],
             "tags": [
                 "rpi",
@@ -556,7 +561,12 @@
         "rpi": {
             "maturity": "stable",
             "personas": [
-                "hve-core-all"
+                "hve-core-all",
+                "developer",
+                "tpm",
+                "devops",
+                "architect",
+                "technical-writer"
             ],
             "tags": [
                 "rpi"
@@ -681,7 +691,12 @@
         "markdown": {
             "maturity": "stable",
             "personas": [
-                "hve-core-all"
+                "hve-core-all",
+                "developer",
+                "tpm",
+                "devops",
+                "architect",
+                "technical-writer"
             ],
             "tags": [
                 "documentation"

@@ -27,6 +27,11 @@
     Optional. When specified, packages the extension for VS Code Marketplace pre-release channel.
     Uses vsce --pre-release flag which marks the extension for the pre-release track.
 
+.PARAMETER Collection
+    Optional. Path to a collection manifest JSON file. When specified, only
+    collection-filtered artifacts are copied and the output filename uses the
+    collection ID.
+
 .EXAMPLE
     ./Package-Extension.ps1
     # Packages using version from package.json
@@ -68,7 +73,10 @@ param(
     [string]$ChangelogPath = "",
 
     [Parameter(Mandatory = $false)]
-    [switch]$PreRelease
+    [switch]$PreRelease,
+
+    [Parameter(Mandatory = $false)]
+    [string]$Collection = ""
 )
 
 $ErrorActionPreference = 'Stop'
@@ -123,6 +131,8 @@ function Get-ExtensionOutputPath {
         The name of the extension (from package.json).
     .PARAMETER PackageVersion
         The version string to use in the filename.
+    .PARAMETER CollectionId
+        Optional collection identifier to use instead of the extension name in the filename.
     .OUTPUTS
         String path to the expected .vsix file.
     #>
@@ -136,10 +146,17 @@ function Get-ExtensionOutputPath {
         [string]$ExtensionName,
 
         [Parameter(Mandatory = $true)]
-        [string]$PackageVersion
+        [string]$PackageVersion,
+
+        [Parameter(Mandatory = $false)]
+        [string]$CollectionId = ""
     )
 
-    $vsixFileName = "$ExtensionName-$PackageVersion.vsix"
+    $vsixFileName = if ($CollectionId -and $CollectionId -ne "") {
+        "$CollectionId-$PackageVersion.vsix"
+    } else {
+        "$ExtensionName-$PackageVersion.vsix"
+    }
     return Join-Path $ExtensionDirectory $vsixFileName
 }
 
@@ -423,6 +440,11 @@ function Get-PackagingDirectorySpec {
             IsFile      = $false
         },
         @{
+            Source      = Join-Path $RepoRoot ".github/skills"
+            Destination = Join-Path $ExtensionDirectory ".github/skills"
+            IsFile      = $false
+        },
+        @{
             Source      = Join-Path $RepoRoot "scripts/dev-tools"
             Destination = Join-Path $ExtensionDirectory "scripts/dev-tools"
             IsFile      = $false
@@ -443,6 +465,94 @@ function Get-PackagingDirectorySpec {
 #endregion Pure Functions
 
 #region I/O Functions
+
+function Copy-CollectionArtifacts {
+    <#
+    .SYNOPSIS
+        Copies only collection-filtered artifacts to the extension directory.
+    .DESCRIPTION
+        Reads the prepared package.json to determine which artifacts were selected
+        by collection filtering, then copies only those files instead of the entire
+        .github directory. Always includes copilot-instructions.md.
+    .PARAMETER RepoRoot
+        Absolute path to the repository root.
+    .PARAMETER ExtensionDirectory
+        Absolute path to the extension directory.
+    .PARAMETER PrepareResult
+        Result hashtable from Invoke-PrepareExtension (unused directly, kept for API consistency).
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$RepoRoot,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ExtensionDirectory,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$PrepareResult
+    )
+
+    $preparedPkgJson = Get-Content -Path (Join-Path $ExtensionDirectory "package.json") -Raw | ConvertFrom-Json
+
+    # Copy filtered agents
+    if ($preparedPkgJson.contributes.chatAgents) {
+        $agentsDestDir = Join-Path $ExtensionDirectory ".github/agents"
+        New-Item -Path $agentsDestDir -ItemType Directory -Force | Out-Null
+        foreach ($agent in $preparedPkgJson.contributes.chatAgents) {
+            $srcPath = Join-Path $RepoRoot ($agent.path.TrimStart('./'))
+            if (Test-Path $srcPath) {
+                Copy-Item -Path $srcPath -Destination $agentsDestDir -Force
+            }
+        }
+    }
+
+    # Copy filtered prompts
+    if ($preparedPkgJson.contributes.chatPromptFiles) {
+        foreach ($prompt in $preparedPkgJson.contributes.chatPromptFiles) {
+            $srcPath = Join-Path $RepoRoot ($prompt.path.TrimStart('./'))
+            $destPath = Join-Path $ExtensionDirectory ($prompt.path.TrimStart('./'))
+            $destDir = Split-Path $destPath -Parent
+            New-Item -Path $destDir -ItemType Directory -Force | Out-Null
+            if (Test-Path $srcPath) {
+                Copy-Item -Path $srcPath -Destination $destPath -Force
+            }
+        }
+    }
+
+    # Copy filtered instructions
+    if ($preparedPkgJson.contributes.chatInstructions) {
+        foreach ($instr in $preparedPkgJson.contributes.chatInstructions) {
+            $srcPath = Join-Path $RepoRoot ($instr.path.TrimStart('./'))
+            $destPath = Join-Path $ExtensionDirectory ($instr.path.TrimStart('./'))
+            $destDir = Split-Path $destPath -Parent
+            New-Item -Path $destDir -ItemType Directory -Force | Out-Null
+            if (Test-Path $srcPath) {
+                Copy-Item -Path $srcPath -Destination $destPath -Force
+            }
+        }
+    }
+
+    # Copy filtered skills
+    if ($preparedPkgJson.contributes.chatSkills) {
+        foreach ($skill in $preparedPkgJson.contributes.chatSkills) {
+            $srcPath = Join-Path $RepoRoot ($skill.path.TrimStart('./'))
+            $destPath = Join-Path $ExtensionDirectory ($skill.path.TrimStart('./'))
+            if (Test-Path $srcPath) {
+                Copy-Item -Path $srcPath -Destination $destPath -Recurse -Force
+            }
+        }
+    }
+
+    # Always copy copilot-instructions.md (needed by all collections)
+    $copilotInstr = Join-Path $RepoRoot ".github/copilot-instructions.md"
+    $copilotDest = Join-Path $ExtensionDirectory ".github/copilot-instructions.md"
+    if (Test-Path $copilotInstr) {
+        $copilotDestDir = Split-Path $copilotDest -Parent
+        New-Item -Path $copilotDestDir -ItemType Directory -Force | Out-Null
+        Copy-Item -Path $copilotInstr -Destination $copilotDest -Force
+    }
+}
 
 function Invoke-VsceCommand {
     <#
@@ -597,6 +707,10 @@ function Invoke-PackageExtension {
         Optional path to changelog file to include in package.
     .PARAMETER PreRelease
         Switch to mark the package as a pre-release version.
+    .PARAMETER Collection
+        Optional path to a collection manifest JSON file. When specified, only
+        collection-filtered artifacts are copied and the output filename uses the
+        collection ID.
     .OUTPUTS
         Hashtable with Success, OutputPath, Version, and ErrorMessage properties.
     #>
@@ -621,7 +735,10 @@ function Invoke-PackageExtension {
         [string]$ChangelogPath = "",
 
         [Parameter(Mandatory = $false)]
-        [switch]$PreRelease
+        [switch]$PreRelease,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Collection = ""
     )
 
     $dirsToClean = @(".github", "docs", "scripts")
@@ -683,6 +800,13 @@ function Invoke-PackageExtension {
             $versionWasModified = $true
         }
 
+        # Extract collection ID for output naming
+        $collectionId = $null
+        if ($Collection -and $Collection -ne "") {
+            $collectionContent = Get-Content -Path $Collection -Raw | ConvertFrom-Json
+            $collectionId = $collectionContent.id
+        }
+
         # Handle changelog if provided
         if ($ChangelogPath -and $ChangelogPath -ne "") {
             Write-Host ""
@@ -713,20 +837,51 @@ function Invoke-PackageExtension {
 
         # Get and execute copy specifications
         $copySpecs = Get-PackagingDirectorySpec -RepoRoot $RepoRoot -ExtensionDirectory $ExtensionDirectory
-        foreach ($spec in $copySpecs) {
-            $specName = Split-Path $spec.Source -Leaf
-            Write-Host "   Copying $specName..." -ForegroundColor Gray
 
-            if ($spec.IsFile) {
-                $parentDir = Split-Path $spec.Destination -Parent
-                New-Item -Path $parentDir -ItemType Directory -Force | Out-Null
-                Copy-Item -Path $spec.Source -Destination $spec.Destination -Force
-            } else {
-                $parentDir = Split-Path $spec.Destination -Parent
-                if (-not (Test-Path $parentDir)) {
-                    New-Item -Path $parentDir -ItemType Directory -Force | Out-Null
+        if ($Collection -and $Collection -ne "") {
+            # Collection mode: copy only filtered artifacts for .github content
+            Write-Host "   Using collection-filtered artifact copy..." -ForegroundColor Gray
+
+            # Copy non-.github specs normally
+            foreach ($spec in $copySpecs) {
+                if ($spec.Source -like "*/.github*" -or $spec.Source -like "*\.github*") {
+                    continue
                 }
-                Copy-Item -Path $spec.Source -Destination $spec.Destination -Recurse -Force
+                $specName = Split-Path $spec.Source -Leaf
+                Write-Host "   Copying $specName..." -ForegroundColor Gray
+
+                if ($spec.IsFile) {
+                    $parentDir = Split-Path $spec.Destination -Parent
+                    New-Item -Path $parentDir -ItemType Directory -Force | Out-Null
+                    Copy-Item -Path $spec.Source -Destination $spec.Destination -Force
+                } else {
+                    $parentDir = Split-Path $spec.Destination -Parent
+                    if (-not (Test-Path $parentDir)) {
+                        New-Item -Path $parentDir -ItemType Directory -Force | Out-Null
+                    }
+                    Copy-Item -Path $spec.Source -Destination $spec.Destination -Recurse -Force
+                }
+            }
+
+            # Copy collection-specific artifacts
+            Copy-CollectionArtifacts -RepoRoot $RepoRoot -ExtensionDirectory $ExtensionDirectory -PrepareResult @{}
+        } else {
+            # Full mode: copy everything as before
+            foreach ($spec in $copySpecs) {
+                $specName = Split-Path $spec.Source -Leaf
+                Write-Host "   Copying $specName..." -ForegroundColor Gray
+
+                if ($spec.IsFile) {
+                    $parentDir = Split-Path $spec.Destination -Parent
+                    New-Item -Path $parentDir -ItemType Directory -Force | Out-Null
+                    Copy-Item -Path $spec.Source -Destination $spec.Destination -Force
+                } else {
+                    $parentDir = Split-Path $spec.Destination -Parent
+                    if (-not (Test-Path $parentDir)) {
+                        New-Item -Path $parentDir -ItemType Directory -Force | Out-Null
+                    }
+                    Copy-Item -Path $spec.Source -Destination $spec.Destination -Recurse -Force
+                }
             }
         }
 
@@ -821,7 +976,8 @@ try {
             -Version $Version `
             -DevPatchNumber $DevPatchNumber `
             -ChangelogPath $ChangelogPath `
-            -PreRelease:$PreRelease
+            -PreRelease:$PreRelease `
+            -Collection $Collection
 
         if (-not $result.Success) {
             Write-Error $result.ErrorMessage
