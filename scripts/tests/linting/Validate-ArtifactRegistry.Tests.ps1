@@ -699,6 +699,15 @@ Describe 'Main Execution Block' -Tag 'Integration' {
             # The script should not error when running with valid RepoRoot
             { & $script:MainScriptPath -RepoRoot $testRepo -RegistryPath "$testRepo/.github/ai-artifacts-registry.json" -OutputPath "$testRepo/logs/results.json" 2>$null } | Should -Not -Throw
         }
+
+        It 'Derives RepoRoot from PSScriptRoot grandparent when not provided' {
+            # Run from the actual repo - without RepoRoot the script resolves $PSScriptRoot/../..
+            $null = & pwsh -NoProfile -Command "& '$script:MainScriptPath' -OutputPath '$TestDrive/results.json'; exit `$LASTEXITCODE" 2>&1
+            # Script should resolve RepoRoot and produce output
+            Test-Path "$TestDrive/results.json" | Should -BeTrue
+        }
+
+
     }
 
     Context 'Validation orchestration' {
@@ -809,6 +818,30 @@ Describe 'Main Execution Block' -Tag 'Integration' {
             $LASTEXITCODE | Should -Be 0
         }
 
+        It 'Returns exit code 0 on success with default OutputPath' {
+            $testRepo = Join-Path $TestDrive 'success-default-output-repo'
+            New-Item -ItemType Directory -Path "$testRepo/.git" -Force | Out-Null
+            New-Item -ItemType Directory -Path "$testRepo/.github/agents" -Force | Out-Null
+            New-Item -ItemType Directory -Path "$testRepo/.github/prompts" -Force | Out-Null
+            New-Item -ItemType Directory -Path "$testRepo/.github/instructions" -Force | Out-Null
+            New-Item -ItemType Directory -Path "$testRepo/.github/skills/test-skill" -Force | Out-Null
+            Copy-Item -Path $script:ValidRegistryPath -Destination "$testRepo/.github/ai-artifacts-registry.json"
+
+            # Create the referenced artifact files
+            Set-Content -Path "$testRepo/.github/agents/test-agent.agent.md" -Value '# Test Agent'
+            Set-Content -Path "$testRepo/.github/agents/dependent-agent.agent.md" -Value '# Dependent Agent'
+            Set-Content -Path "$testRepo/.github/prompts/test-prompt.prompt.md" -Value '# Test Prompt'
+            Set-Content -Path "$testRepo/.github/instructions/test-instruction.instructions.md" -Value '# Test Instruction'
+            Set-Content -Path "$testRepo/.github/skills/test-skill/SKILL.md" -Value '# Test Skill'
+
+            # Run without OutputPath - should use default logs/registry-validation-results.json
+            $null = & pwsh -NoProfile -Command "& '$script:MainScriptPath' -RepoRoot '$testRepo'; exit `$LASTEXITCODE" 2>&1
+            $LASTEXITCODE | Should -Be 0
+
+            # Verify default output path was used
+            Test-Path "$testRepo/logs/registry-validation-results.json" | Should -BeTrue
+        }
+
         It 'Returns exit code 1 when errors exist' {
             $testRepo = Join-Path $TestDrive 'error-repo'
             New-Item -ItemType Directory -Path "$testRepo/.git" -Force | Out-Null
@@ -843,6 +876,31 @@ Describe 'Main Execution Block' -Tag 'Integration' {
             $null = & pwsh -NoProfile -Command "& '$script:MainScriptPath' -RepoRoot '$testRepo' -OutputPath '$testRepo/logs/results.json' -WarningsAsErrors; exit `$LASTEXITCODE" 2>&1
             $LASTEXITCODE | Should -Be 1
         }
+
+        It 'Returns exit code 0 with warnings but without WarningsAsErrors flag' {
+            $testRepo = Join-Path $TestDrive 'warnings-no-error-repo'
+            New-Item -ItemType Directory -Path "$testRepo/.git" -Force | Out-Null
+            New-Item -ItemType Directory -Path "$testRepo/.github/agents" -Force | Out-Null
+            New-Item -ItemType Directory -Path "$testRepo/.github/prompts" -Force | Out-Null
+            New-Item -ItemType Directory -Path "$testRepo/.github/instructions" -Force | Out-Null
+            New-Item -ItemType Directory -Path "$testRepo/.github/skills/test-skill" -Force | Out-Null
+            New-Item -ItemType Directory -Path "$testRepo/logs" -Force | Out-Null
+            Copy-Item -Path $script:ValidRegistryPath -Destination "$testRepo/.github/ai-artifacts-registry.json"
+
+            # Create the referenced artifact files
+            Set-Content -Path "$testRepo/.github/agents/test-agent.agent.md" -Value '# Test Agent'
+            Set-Content -Path "$testRepo/.github/agents/dependent-agent.agent.md" -Value '# Dependent Agent'
+            Set-Content -Path "$testRepo/.github/prompts/test-prompt.prompt.md" -Value '# Test Prompt'
+            Set-Content -Path "$testRepo/.github/instructions/test-instruction.instructions.md" -Value '# Test Instruction'
+            Set-Content -Path "$testRepo/.github/skills/test-skill/SKILL.md" -Value '# Test Skill'
+
+            # Add an orphan file to trigger a warning
+            Set-Content -Path "$testRepo/.github/agents/orphan-agent.agent.md" -Value '# Orphan'
+
+            # Without WarningsAsErrors, should still pass
+            $null = & pwsh -NoProfile -Command "& '$script:MainScriptPath' -RepoRoot '$testRepo' -OutputPath '$testRepo/logs/results.json'; exit `$LASTEXITCODE" 2>&1
+            $LASTEXITCODE | Should -Be 0
+        }
     }
 
     Context 'Exception handling' {
@@ -851,6 +909,28 @@ Describe 'Main Execution Block' -Tag 'Integration' {
             $testRepo = '/nonexistent/path/that/will/cause/error'
             $null = & pwsh -NoProfile -Command "& '$script:MainScriptPath' -RepoRoot '$testRepo'; exit `$LASTEXITCODE" 2>&1
             $LASTEXITCODE | Should -Be 1
+        }
+
+        It 'Writes CI error annotation when exception occurs in GitHub Actions' {
+            $env:GITHUB_ACTIONS = 'true'
+            # Use completely invalid path to trigger exception in catch block
+            $invalidRepo = '/this/path/does/not/exist/anywhere'
+
+            $output = & $script:MainScriptPath -RepoRoot $invalidRepo 2>&1 | Out-String
+
+            # Should have error annotation from the catch block
+            $output | Should -Match '::error.*Registry validation failed'
+        }
+
+        It 'Writes CI error annotation when exception occurs in Azure DevOps' {
+            $env:TF_BUILD = 'True'
+            # Use completely invalid path to trigger exception in catch block
+            $invalidRepo = '/this/path/does/not/exist/anywhere'
+
+            $output = & $script:MainScriptPath -RepoRoot $invalidRepo 2>&1 | Out-String
+
+            # Should have error annotation from the catch block (Azure DevOps format)
+            $output | Should -Match '##vso\[task\.logissue.*error.*Registry validation failed'
         }
     }
 }

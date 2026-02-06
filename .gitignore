@@ -442,6 +442,9 @@ checkov-junit.xml
 pr.md
 pr-reference.xml
 
+# Dependency pinning scan artifacts
+dependency-pinning-artifacts/
+
 # Copilot tracking
 .copilot-tracking/
 

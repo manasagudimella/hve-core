@@ -520,15 +520,9 @@ function Export-RegistryValidationResults {
 
 try {
     if ($MyInvocation.InvocationName -ne '.') {
-        # Resolve paths
+        # Resolve paths - script lives at scripts/linting/, so grandparent is repo root
         if (-not $RepoRoot) {
-            $RepoRoot = $PSScriptRoot
-            while ($RepoRoot -and -not (Test-Path (Join-Path $RepoRoot '.git'))) {
-                $RepoRoot = Split-Path -Parent $RepoRoot
-            }
-            if (-not $RepoRoot) {
-                throw "Could not find repository root"
-            }
+            $RepoRoot = (Resolve-Path "$PSScriptRoot/../..").Path
         }
 
         if (-not $RegistryPath) {
