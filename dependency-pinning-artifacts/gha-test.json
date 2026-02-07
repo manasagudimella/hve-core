@@ -1,0 +1,21 @@
+{
+  "ScanPath": "/tmp/e2c4b466-281d-4a54-b329-6695233e013c/test-workflows",
+  "Timestamp": "2026-02-07T07:57:02.2717762+00:00",
+  "TotalFiles": 0,
+  "ScannedFiles": 0,
+  "TotalDependencies": 0,
+  "PinnedDependencies": 0,
+  "UnpinnedDependencies": 0,
+  "ComplianceScore": 100.0,
+  "Violations": [],
+  "Summary": {},
+  "Metadata": {
+    "Platform": "Unix",
+    "ScanTimestamp": "2026-02-07T07:57:02.271Z",
+    "PowerShellVersion": "7.4.13",
+    "IncludedTypes": "github-actions,npm,pip,shell-downloads",
+    "RemediationEnabled": false,
+    "ExcludedPaths": "",
+    "ComplianceThreshold": 95
+  }
+}
