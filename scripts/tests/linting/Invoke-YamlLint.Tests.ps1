@@ -583,3 +583,123 @@ Describe 'Exit Code Handling' -Tag 'Unit' {
 }
 
 #endregion
+
+#region Invoke-YamlLintValidation Function Tests
+
+Describe 'Invoke-YamlLintValidation Function' -Tag 'Unit' {
+    BeforeAll {
+        $script:TempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.Guid]::NewGuid().ToString())
+        New-Item -ItemType Directory -Path $script:TempDir -Force | Out-Null
+
+        # Dot-source the script to load the function
+        . $script:ScriptPath
+    }
+
+    AfterAll {
+        Remove-Item -Path $script:TempDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    Context 'Return value for success' {
+        BeforeEach {
+            Mock Get-Command { [PSCustomObject]@{ Source = 'actionlint' } } -ParameterFilter { $Name -eq 'actionlint' }
+            Mock actionlint { '[]' }
+            Mock Test-Path { $true } -ParameterFilter { $Path -eq '.github/workflows' }
+            Mock Get-ChildItem {
+                @([PSCustomObject]@{ FullName = '.github/workflows/ci.yml'; Extension = '.yml' })
+            } -ParameterFilter { $Path -eq '.github/workflows' }
+            Mock Set-GitHubOutput {}
+            Mock Set-GitHubEnv {}
+            Mock Write-GitHubStepSummary {}
+            Mock Write-GitHubAnnotation {}
+            Mock New-Item {}
+            Mock Out-File {}
+        }
+
+        It 'Returns 0 when no issues found' {
+            $result = Invoke-YamlLintValidation -OutputPath (Join-Path $script:TempDir 'results.json')
+            $result | Should -Be 0
+        }
+    }
+
+    Context 'Return value for errors' {
+        BeforeEach {
+            Mock Get-Command { [PSCustomObject]@{ Source = 'actionlint' } } -ParameterFilter { $Name -eq 'actionlint' }
+            Mock Test-Path { $true } -ParameterFilter { $Path -eq '.github/workflows' }
+            Mock Get-ChildItem {
+                @([PSCustomObject]@{ FullName = '.github/workflows/ci.yml'; Extension = '.yml' })
+            } -ParameterFilter { $Path -eq '.github/workflows' }
+            Mock Set-GitHubOutput {}
+            Mock Set-GitHubEnv {}
+            Mock Write-GitHubStepSummary {}
+            Mock Write-GitHubAnnotation {}
+            Mock New-Item {}
+            Mock Out-File {}
+        }
+
+        It 'Returns 1 when issues found' {
+            Mock actionlint {
+                '{"message":"error","filepath":"ci.yml","line":1,"column":1}'
+            }
+
+            $result = Invoke-YamlLintValidation -OutputPath (Join-Path $script:TempDir 'error-results.json')
+            $result | Should -Be 1
+        }
+    }
+
+    Context 'ChangedFilesOnly mode' {
+        BeforeEach {
+            Mock Get-Command { [PSCustomObject]@{ Source = 'actionlint' } } -ParameterFilter { $Name -eq 'actionlint' }
+            Mock actionlint { '[]' }
+            Mock Set-GitHubOutput {}
+            Mock Set-GitHubEnv {}
+            Mock Write-GitHubStepSummary {}
+            Mock Write-GitHubAnnotation {}
+            Mock New-Item {}
+            Mock Out-File {}
+        }
+
+        It 'Uses Get-ChangedFilesFromGit in ChangedFilesOnly mode' {
+            Mock Get-ChangedFilesFromGit { @('.github/workflows/test.yml') }
+
+            $result = Invoke-YamlLintValidation -ChangedFilesOnly -OutputPath (Join-Path $script:TempDir 'changed-results.json')
+            Should -Invoke Get-ChangedFilesFromGit -Times 1
+        }
+
+        It 'Passes custom BaseBranch to Get-ChangedFilesFromGit' {
+            Mock Get-ChangedFilesFromGit { @() }
+
+            Invoke-YamlLintValidation -ChangedFilesOnly -BaseBranch 'develop' -OutputPath (Join-Path $script:TempDir 'branch-results.json')
+            Should -Invoke Get-ChangedFilesFromGit -Times 1 -ParameterFilter {
+                $BaseBranch -eq 'develop'
+            }
+        }
+    }
+
+    Context 'Directory creation' {
+        BeforeEach {
+            Mock Get-Command { [PSCustomObject]@{ Source = 'actionlint' } } -ParameterFilter { $Name -eq 'actionlint' }
+            Mock actionlint { '[]' }
+            Mock Test-Path { $true } -ParameterFilter { $Path -eq '.github/workflows' }
+            Mock Get-ChildItem {
+                @([PSCustomObject]@{ FullName = '.github/workflows/ci.yml'; Extension = '.yml' })
+            } -ParameterFilter { $Path -eq '.github/workflows' }
+            Mock Set-GitHubOutput {}
+            Mock Set-GitHubEnv {}
+            Mock Write-GitHubStepSummary {}
+            Mock Write-GitHubAnnotation {}
+            Mock Out-File {}
+        }
+
+        It 'Creates logs directory if missing' {
+            $newDir = Join-Path $script:TempDir 'newlogs'
+            $outputPath = Join-Path $newDir 'results.json'
+            Mock Test-Path { $false } -ParameterFilter { $Path -eq $newDir }
+            Mock New-Item {}
+
+            Invoke-YamlLintValidation -OutputPath $outputPath
+            Should -Invoke New-Item -ParameterFilter { $Path -eq $newDir }
+        }
+    }
+}
+
+#endregion

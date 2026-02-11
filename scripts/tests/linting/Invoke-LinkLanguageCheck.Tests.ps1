@@ -456,3 +456,592 @@ Describe 'Invoke-LinkLanguageCheckWrapper' -Tag 'Unit' {
 }
 
 #endregion
+
+#region Invoke-LinkLanguageCheckWrapper Full Path Tests
+
+Describe 'Invoke-LinkLanguageCheckWrapper Full Execution' -Tag 'Unit' {
+    BeforeAll {
+        $script:TestDir = Join-Path ([IO.Path]::GetTempPath()) "llc-wrapper-$(New-Guid)"
+        $script:LogsDir = Join-Path $script:TestDir 'logs'
+        New-Item -ItemType Directory -Path $script:LogsDir -Force | Out-Null
+    }
+
+    AfterAll {
+        if (Test-Path $script:TestDir) {
+            Remove-Item -Path $script:TestDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    Context 'Wrapper executes with issues found' {
+        BeforeEach {
+            Mock Write-GitHubAnnotation { }
+            Mock Set-GitHubOutput { }
+            Mock Set-GitHubEnv { }
+            Mock Write-GitHubStepSummary { }
+        }
+
+        It 'Calls Write-GitHubAnnotation for issues' {
+            # Simulate the wrapper logic for issues found
+            $results = @(
+                [PSCustomObject]@{
+                    file = 'docs/test.md'
+                    line_number = 10
+                    original_url = 'https://docs.microsoft.com/en-us/azure'
+                }
+            )
+
+            foreach ($item in $results) {
+                Write-GitHubAnnotation `
+                    -Type 'warning' `
+                    -Message "URL contains language path: $($item.original_url)" `
+                    -File $item.file `
+                    -Line $item.line_number
+            }
+
+            Should -Invoke Write-GitHubAnnotation -Times 1 -Exactly
+        }
+
+        It 'Saves results to JSON file' {
+            $results = @(
+                [PSCustomObject]@{ file = 'docs/test.md'; line_number = 10; original_url = 'https://docs.microsoft.com/en-us/azure' }
+            )
+
+            $outputData = @{
+                timestamp = (Get-Date).ToUniversalTime().ToString("o")
+                script = "link-lang-check"
+                summary = @{
+                    total_issues = $results.Count
+                    files_affected = ($results | Select-Object -ExpandProperty file -Unique).Count
+                }
+                issues = $results
+            }
+
+            $jsonPath = Join-Path $script:LogsDir "link-lang-check-results.json"
+            $outputData | ConvertTo-Json -Depth 3 | Set-Content -Path $jsonPath -Encoding utf8NoBOM
+
+            Test-Path $jsonPath | Should -BeTrue
+            $content = Get-Content -Path $jsonPath -Raw | ConvertFrom-Json
+            $content.script | Should -Be 'link-lang-check'
+        }
+
+        It 'Writes step summary with issues' {
+            $results = @(
+                [PSCustomObject]@{ file = 'docs/test.md'; line_number = 10; original_url = 'https://docs.microsoft.com/en-us/azure' }
+            )
+            $uniqueFiles = $results | Select-Object -ExpandProperty file -Unique
+
+            $summaryContent = @"
+## Link Language Path Check Results
+
+⚠️ **Status**: Issues Found
+
+Found $($results.Count) URL(s) containing language path 'en-us'.
+
+**Files affected:**
+$(($uniqueFiles | ForEach-Object { $count = ($results | Where-Object file -eq $_).Count; "- $_ ($count occurrence(s))" }) -join "`n")
+"@
+            Write-GitHubStepSummary -Content $summaryContent
+
+            Should -Invoke Write-GitHubStepSummary -Times 1 -Exactly
+        }
+    }
+
+    Context 'Wrapper executes with no issues' {
+        BeforeEach {
+            Mock Write-GitHubAnnotation { }
+            Mock Set-GitHubOutput { }
+            Mock Set-GitHubEnv { }
+            Mock Write-GitHubStepSummary { }
+        }
+
+        It 'Sets issues output to 0' {
+            Set-GitHubOutput -Name "issues" -Value "0"
+
+            Should -Invoke Set-GitHubOutput -Times 1 -Exactly -ParameterFilter {
+                $Name -eq 'issues' -and $Value -eq '0'
+            }
+        }
+
+        It 'Writes success step summary' {
+            $summaryContent = @"
+## Link Language Path Check Results
+
+✅ **Status**: Passed
+
+No URLs with language-specific paths detected.
+"@
+            Write-GitHubStepSummary -Content $summaryContent
+
+            Should -Invoke Write-GitHubStepSummary -Times 1 -Exactly
+        }
+
+        It 'Saves empty results to JSON file' {
+            $emptyResults = @{
+                timestamp = (Get-Date).ToUniversalTime().ToString("o")
+                script = "link-lang-check"
+                summary = @{
+                    total_issues = 0
+                    files_affected = 0
+                }
+                issues = @()
+            }
+
+            $jsonPath = Join-Path $script:LogsDir "link-lang-check-empty-results.json"
+            $emptyResults | ConvertTo-Json -Depth 3 | Set-Content -Path $jsonPath -Encoding utf8NoBOM
+
+            Test-Path $jsonPath | Should -BeTrue
+            $content = Get-Content -Path $jsonPath -Raw | ConvertFrom-Json
+            $content.summary.total_issues | Should -Be 0
+        }
+    }
+
+    Context 'Wrapper handles git errors' {
+        BeforeEach {
+            Mock Write-Error { }
+        }
+
+        It 'Returns error when not in git repository' {
+            Mock git {
+                $global:LASTEXITCODE = 128
+                return 'fatal: not a git repository'
+            }
+
+            # Simulate the check from the function
+            $repoRoot = git rev-parse --show-toplevel 2>$null
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "Not in a git repository"
+            }
+
+            Should -Invoke Write-Error -Times 1 -Exactly -ParameterFilter {
+                $Message -eq 'Not in a git repository'
+            }
+        }
+    }
+
+    Context 'Logs directory creation' {
+        It 'Creates logs directory if it does not exist' {
+            $tempRoot = Join-Path ([IO.Path]::GetTempPath()) "llc-logs-$(New-Guid)"
+            $logsDir = Join-Path $tempRoot 'logs'
+
+            try {
+                New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+
+                # Simulate the directory creation logic
+                if (-not (Test-Path $logsDir)) {
+                    New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+                }
+
+                Test-Path $logsDir | Should -BeTrue
+            }
+            finally {
+                Remove-Item -Path $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+}
+
+#endregion
+
+#region Invoke-LinkLanguageCheckWrapper Integration Tests
+
+Describe 'Invoke-LinkLanguageCheckWrapper Real Execution' -Tag 'Unit' {
+    BeforeAll {
+        $script:TestRepoDir = Join-Path ([IO.Path]::GetTempPath()) "llc-int-$(New-Guid)"
+        New-Item -ItemType Directory -Path $script:TestRepoDir -Force | Out-Null
+    }
+
+    AfterAll {
+        if (Test-Path $script:TestRepoDir) {
+            Remove-Item -Path $script:TestRepoDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    Context 'Full wrapper execution with real git repo' {
+        BeforeEach {
+            # Create a minimal git repo with test files
+            Push-Location $script:TestRepoDir
+            git init --quiet 2>$null
+
+            # Create logs directory
+            New-Item -ItemType Directory -Path (Join-Path $script:TestRepoDir 'logs') -Force | Out-Null
+
+            # Create a file with en-us link
+            $testFile = Join-Path $script:TestRepoDir 'test-doc.md'
+            'Visit https://docs.microsoft.com/en-us/azure for docs.' | Set-Content -Path $testFile
+
+            git add -A 2>$null
+            git commit -m 'initial' --quiet 2>$null
+        }
+
+        AfterEach {
+            Pop-Location
+        }
+
+        It 'Wrapper function executes and returns exit code' {
+            # Mock the GitHub-specific functions since we are not in GitHub Actions
+            Mock Write-GitHubAnnotation { } -ModuleName LintingHelpers
+            Mock Set-GitHubOutput { } -ModuleName LintingHelpers
+            Mock Set-GitHubEnv { } -ModuleName LintingHelpers
+            Mock Write-GitHubStepSummary { } -ModuleName LintingHelpers
+
+            $result = Invoke-LinkLanguageCheckWrapper
+            # The function should return 0 (success) or 1 (issues found)
+            $result | Should -BeIn @(0, 1)
+        }
+
+        It 'Creates results JSON file in logs directory' {
+            Mock Write-GitHubAnnotation { } -ModuleName LintingHelpers
+            Mock Set-GitHubOutput { } -ModuleName LintingHelpers
+            Mock Set-GitHubEnv { } -ModuleName LintingHelpers
+            Mock Write-GitHubStepSummary { } -ModuleName LintingHelpers
+
+            Invoke-LinkLanguageCheckWrapper
+
+            $resultsFile = Join-Path $script:TestRepoDir 'logs/link-lang-check-results.json'
+            Test-Path $resultsFile | Should -BeTrue
+        }
+
+        It 'Results file contains valid JSON structure' {
+            Mock Write-GitHubAnnotation { } -ModuleName LintingHelpers
+            Mock Set-GitHubOutput { } -ModuleName LintingHelpers
+            Mock Set-GitHubEnv { } -ModuleName LintingHelpers
+            Mock Write-GitHubStepSummary { } -ModuleName LintingHelpers
+
+            Invoke-LinkLanguageCheckWrapper
+
+            $resultsFile = Join-Path $script:TestRepoDir 'logs/link-lang-check-results.json'
+            $content = Get-Content -Path $resultsFile -Raw | ConvertFrom-Json
+            $content.script | Should -Be 'link-lang-check'
+            $content.summary | Should -Not -BeNull
+        }
+    }
+
+    Context 'Wrapper with no en-us links' {
+        BeforeEach {
+            Push-Location $script:TestRepoDir
+
+            # Clean up and create fresh repo
+            Remove-Item -Path (Join-Path $script:TestRepoDir '*') -Recurse -Force -ErrorAction SilentlyContinue
+            git init --quiet 2>$null
+
+            New-Item -ItemType Directory -Path (Join-Path $script:TestRepoDir 'logs') -Force | Out-Null
+
+            # Create a file WITHOUT en-us link
+            $testFile = Join-Path $script:TestRepoDir 'clean-doc.md'
+            'Visit https://docs.microsoft.com/azure for docs.' | Set-Content -Path $testFile
+
+            git add -A 2>$null
+            git commit -m 'clean' --quiet 2>$null
+        }
+
+        AfterEach {
+            Pop-Location
+        }
+
+        It 'Returns 0 when no issues found' {
+            Mock Write-GitHubAnnotation { } -ModuleName LintingHelpers
+            Mock Set-GitHubOutput { } -ModuleName LintingHelpers
+            Mock Set-GitHubEnv { } -ModuleName LintingHelpers
+            Mock Write-GitHubStepSummary { } -ModuleName LintingHelpers
+
+            $result = Invoke-LinkLanguageCheckWrapper
+            $result | Should -Be 0
+        }
+
+        It 'Results show zero issues' {
+            Mock Write-GitHubAnnotation { } -ModuleName LintingHelpers
+            Mock Set-GitHubOutput { } -ModuleName LintingHelpers
+            Mock Set-GitHubEnv { } -ModuleName LintingHelpers
+            Mock Write-GitHubStepSummary { } -ModuleName LintingHelpers
+
+            Invoke-LinkLanguageCheckWrapper
+
+            $resultsFile = Join-Path $script:TestRepoDir 'logs/link-lang-check-results.json'
+            $content = Get-Content -Path $resultsFile -Raw | ConvertFrom-Json
+            $content.summary.total_issues | Should -Be 0
+        }
+    }
+
+    Context 'Wrapper with ExcludePaths' {
+        BeforeEach {
+            Push-Location $script:TestRepoDir
+
+            # Clean up and create fresh repo
+            Remove-Item -Path (Join-Path $script:TestRepoDir '*') -Recurse -Force -ErrorAction SilentlyContinue
+            git init --quiet 2>$null
+
+            New-Item -ItemType Directory -Path (Join-Path $script:TestRepoDir 'logs') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $script:TestRepoDir 'tests') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $script:TestRepoDir 'docs') -Force | Out-Null
+
+            # Create excluded file with en-us link
+            $excludedFile = Join-Path $script:TestRepoDir 'tests/test.md'
+            'Link: https://docs.microsoft.com/en-us/test' | Set-Content -Path $excludedFile
+
+            # Create included file without en-us link
+            $includedFile = Join-Path $script:TestRepoDir 'docs/clean.md'
+            'Link: https://docs.microsoft.com/azure' | Set-Content -Path $includedFile
+
+            git add -A 2>$null
+            git commit -m 'with exclusions' --quiet 2>$null
+        }
+
+        AfterEach {
+            Pop-Location
+        }
+
+        It 'Excludes files matching pattern' {
+            Mock Write-GitHubAnnotation { } -ModuleName LintingHelpers
+            Mock Set-GitHubOutput { } -ModuleName LintingHelpers
+            Mock Set-GitHubEnv { } -ModuleName LintingHelpers
+            Mock Write-GitHubStepSummary { } -ModuleName LintingHelpers
+
+            $result = Invoke-LinkLanguageCheckWrapper -ExcludePaths @('tests/**')
+
+            # Should return 0 because the only file with en-us is excluded
+            $result | Should -Be 0
+        }
+    }
+}
+
+Describe 'Invoke-LinkLanguageCheckWrapper Orchestration Paths' -Tag 'Unit' {
+    BeforeAll {
+        $script:OrchDir = Join-Path ([IO.Path]::GetTempPath()) "llc-orch-$(New-Guid)"
+        New-Item -ItemType Directory -Path $script:OrchDir -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $script:OrchDir 'logs') -Force | Out-Null
+    }
+
+    AfterAll {
+        if (Test-Path $script:OrchDir) {
+            Remove-Item -Path $script:OrchDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    Context 'Script invocation' {
+        It 'Constructs script path correctly' {
+            $scriptDir = $PSScriptRoot.Replace('\tests\linting', '\linting')
+            $linkLangCheckPath = Join-Path $scriptDir 'Link-Lang-Check.ps1'
+            # Path should be well-formed
+            $linkLangCheckPath | Should -Match 'Link-Lang-Check\.ps1$'
+        }
+
+        It 'Passes ExcludePaths to inner script when provided' {
+            $scriptArgs = @{}
+            $excludePaths = @('node_modules', '.git')
+            if ($excludePaths.Count -gt 0) {
+                $scriptArgs['ExcludePaths'] = $excludePaths
+            }
+            $scriptArgs.Keys | Should -Contain 'ExcludePaths'
+            $scriptArgs['ExcludePaths'] | Should -HaveCount 2
+        }
+
+        It 'Does not pass ExcludePaths when empty' {
+            $scriptArgs = @{}
+            $excludePaths = @()
+            if ($excludePaths.Count -gt 0) {
+                $scriptArgs['ExcludePaths'] = $excludePaths
+            }
+            $scriptArgs.Keys | Should -Not -Contain 'ExcludePaths'
+        }
+    }
+
+    Context 'Results parsing' {
+        It 'Handles valid JSON with issues' {
+            $jsonOutput = @'
+[
+    {"file": "docs/test.md", "line_number": 10, "original_url": "https://docs.microsoft.com/en-us/azure"}
+]
+'@
+            $results = $jsonOutput | ConvertFrom-Json
+            $results | Should -HaveCount 1
+            $results[0].file | Should -Be 'docs/test.md'
+        }
+
+        It 'Handles empty JSON array' {
+            $jsonOutput = '[]'
+            $results = $jsonOutput | ConvertFrom-Json
+            $results | Should -BeNullOrEmpty
+        }
+
+        It 'Results have required properties' {
+            $jsonOutput = '[{"file": "test.md", "line_number": 5, "original_url": "https://example.com/en-us/page"}]'
+            $results = $jsonOutput | ConvertFrom-Json
+            $results[0].PSObject.Properties.Name | Should -Contain 'file'
+            $results[0].PSObject.Properties.Name | Should -Contain 'line_number'
+            $results[0].PSObject.Properties.Name | Should -Contain 'original_url'
+        }
+    }
+
+    Context 'Git repository handling' {
+        BeforeEach {
+            Mock Write-Error { }
+        }
+
+        It 'Gets repo root from git command' {
+            Mock git { return $script:OrchDir } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            $repoRoot = git rev-parse --show-toplevel
+            $repoRoot | Should -Be $script:OrchDir
+        }
+
+        It 'Handles git failure gracefully' {
+            Mock git {
+                $global:LASTEXITCODE = 128
+                return $null
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            $repoRoot = git rev-parse --show-toplevel 2>$null
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error "Not in a git repository"
+            }
+
+            Should -Invoke Write-Error -Times 1
+        }
+    }
+
+    Context 'Annotation creation for issues' {
+        BeforeEach {
+            Mock Write-GitHubAnnotation { }
+        }
+
+        It 'Creates warning annotation for each issue' {
+            $issues = @(
+                [PSCustomObject]@{ file = 'a.md'; line_number = 1; original_url = 'https://docs.microsoft.com/en-us/test' },
+                [PSCustomObject]@{ file = 'b.md'; line_number = 2; original_url = 'https://learn.microsoft.com/en-us/dotnet' }
+            )
+
+            foreach ($item in $issues) {
+                Write-GitHubAnnotation `
+                    -Type 'warning' `
+                    -Message "URL contains language path: $($item.original_url)" `
+                    -File $item.file `
+                    -Line $item.line_number
+            }
+
+            Should -Invoke Write-GitHubAnnotation -Times 2 -Exactly
+        }
+    }
+
+    Context 'Output data structure' {
+        It 'Creates output data with timestamp' {
+            $outputData = @{
+                timestamp = (Get-Date).ToUniversalTime().ToString("o")
+                script = "link-lang-check"
+                summary = @{ total_issues = 0; files_affected = 0 }
+                issues = @()
+            }
+
+            $outputData.timestamp | Should -Match '^\d{4}-\d{2}-\d{2}T'
+        }
+
+        It 'Calculates files_affected from unique files' {
+            $results = @(
+                [PSCustomObject]@{ file = 'a.md'; line_number = 1; original_url = 'url1' },
+                [PSCustomObject]@{ file = 'a.md'; line_number = 2; original_url = 'url2' },
+                [PSCustomObject]@{ file = 'b.md'; line_number = 1; original_url = 'url3' }
+            )
+
+            $filesAffected = ($results | Select-Object -ExpandProperty file -Unique).Count
+            $filesAffected | Should -Be 2
+        }
+    }
+
+    Context 'GitHub output and environment' {
+        BeforeEach {
+            Mock Set-GitHubOutput { }
+            Mock Set-GitHubEnv { }
+        }
+
+        It 'Sets issues output with count' {
+            $issueCount = 5
+            Set-GitHubOutput -Name "issues" -Value $issueCount
+
+            Should -Invoke Set-GitHubOutput -ParameterFilter { $Name -eq 'issues' -and $Value -eq 5 }
+        }
+
+        It 'Sets LINK_LANG_FAILED when issues found' {
+            Set-GitHubEnv -Name "LINK_LANG_FAILED" -Value "true"
+
+            Should -Invoke Set-GitHubEnv -ParameterFilter { $Name -eq 'LINK_LANG_FAILED' -and $Value -eq 'true' }
+        }
+    }
+
+    Context 'Step summary generation' {
+        BeforeEach {
+            Mock Write-GitHubStepSummary { }
+        }
+
+        It 'Generates summary for issues found' {
+            $results = @(
+                [PSCustomObject]@{ file = 'test.md'; line_number = 1; original_url = 'https://example.com/en-us/page' }
+            )
+            $uniqueFiles = $results | Select-Object -ExpandProperty file -Unique
+
+            $summary = @"
+## Link Language Path Check Results
+
+⚠️ **Status**: Issues Found
+
+Found $($results.Count) URL(s) containing language path 'en-us'.
+
+**Files affected:**
+$(($uniqueFiles | ForEach-Object { $count = ($results | Where-Object file -eq $_).Count; "- $_ ($count occurrence(s))" }) -join "`n")
+"@
+            Write-GitHubStepSummary -Content $summary
+
+            Should -Invoke Write-GitHubStepSummary -Times 1
+        }
+
+        It 'Generates success summary for no issues' {
+            $summary = @"
+## Link Language Path Check Results
+
+✅ **Status**: Passed
+
+No URLs with language-specific paths detected.
+"@
+            Write-GitHubStepSummary -Content $summary
+
+            Should -Invoke Write-GitHubStepSummary -Times 1
+        }
+    }
+
+    Context 'Return values' {
+        It 'Returns 1 when issues found' {
+            $results = @([PSCustomObject]@{ file = 'test.md'; line_number = 1; original_url = 'url' })
+            $exitCode = if ($results -and $results.Count -gt 0) { 1 } else { 0 }
+            $exitCode | Should -Be 1
+        }
+
+        It 'Returns 0 when no issues' {
+            $results = @()
+            $exitCode = if ($results -and $results.Count -gt 0) { 1 } else { 0 }
+            $exitCode | Should -Be 0
+        }
+
+        It 'Returns 0 for null results' {
+            $results = $null
+            $exitCode = if ($results -and $results.Count -gt 0) { 1 } else { 0 }
+            $exitCode | Should -Be 0
+        }
+    }
+
+    Context 'File writing' {
+        It 'Writes results to JSON file' {
+            $outputData = @{
+                timestamp = (Get-Date).ToUniversalTime().ToString("o")
+                script = "link-lang-check"
+                summary = @{ total_issues = 1; files_affected = 1 }
+                issues = @(@{ file = 'test.md'; line_number = 1; original_url = 'url' })
+            }
+
+            $jsonPath = Join-Path $script:OrchDir 'logs/orch-test-results.json'
+            $outputData | ConvertTo-Json -Depth 3 | Out-File $jsonPath -Encoding utf8
+
+            Test-Path $jsonPath | Should -BeTrue
+            $content = Get-Content $jsonPath -Raw | ConvertFrom-Json
+            $content.script | Should -Be 'link-lang-check'
+        }
+    }
+}
+

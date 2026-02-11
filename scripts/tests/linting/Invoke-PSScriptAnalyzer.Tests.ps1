@@ -325,3 +325,159 @@ Describe 'Exit Code Handling' -Tag 'Unit' {
 }
 
 #endregion
+
+#region Invoke-PSScriptAnalysis Function Tests
+
+Describe 'Invoke-PSScriptAnalysis Function' -Tag 'Unit' {
+    BeforeAll {
+        $script:TempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.Guid]::NewGuid().ToString())
+        New-Item -ItemType Directory -Path $script:TempDir -Force | Out-Null
+        $script:logsDir = Join-Path $script:TempDir 'logs'
+        New-Item -ItemType Directory -Path $script:logsDir -Force | Out-Null
+
+        # Dot-source the script to load the function
+        . $script:ScriptPath
+    }
+
+    AfterAll {
+        Remove-Item -Path $script:TempDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    Context 'Return value for success' {
+        BeforeEach {
+            Mock Invoke-ScriptAnalyzer { @() }
+            Mock Set-GitHubOutput {}
+            Mock Set-GitHubEnv {}
+            Mock Write-GitHubStepSummary {}
+            Mock Write-GitHubAnnotation {}
+        }
+
+        It 'Returns 0 when no issues found' {
+            $testFile = Join-Path $script:TempDir 'clean.ps1'
+            'Write-Host "test"' | Set-Content $testFile
+            $outPath = Join-Path $script:logsDir 'results.json'
+            $configPath = Join-Path $PSScriptRoot '../../linting/PSScriptAnalyzer.psd1'
+
+            $result = Invoke-PSScriptAnalysis -FilesToAnalyze @($testFile) -ConfigPath $configPath -OutputPath $outPath
+            $result | Should -Be 0
+        }
+    }
+
+    Context 'Return value for errors' {
+        BeforeEach {
+            Mock Set-GitHubOutput {}
+            Mock Set-GitHubEnv {}
+            Mock Write-GitHubStepSummary {}
+            Mock Write-GitHubAnnotation {}
+        }
+
+        It 'Returns 1 when errors found' {
+            Mock Invoke-ScriptAnalyzer {
+                return @(
+                    [PSCustomObject]@{
+                        ScriptPath = 'test.ps1'
+                        Severity   = 'Error'
+                        RuleName   = 'PSAvoidUsingInvokeExpression'
+                        Message    = 'Error message'
+                        Line       = 1
+                        Column     = 1
+                    }
+                )
+            }
+
+            $testFile = Join-Path $script:TempDir 'errors.ps1'
+            'Invoke-Expression "bad"' | Set-Content $testFile
+            $outPath = Join-Path $script:logsDir 'error-results.json'
+            $configPath = Join-Path $PSScriptRoot '../../linting/PSScriptAnalyzer.psd1'
+
+            $result = Invoke-PSScriptAnalysis -FilesToAnalyze @($testFile) -ConfigPath $configPath -OutputPath $outPath
+            $result | Should -Be 1
+        }
+    }
+
+    Context 'Summary generation' {
+        BeforeEach {
+            Mock Set-GitHubOutput {}
+            Mock Set-GitHubEnv {}
+            Mock Write-GitHubStepSummary {}
+            Mock Write-GitHubAnnotation {}
+        }
+
+        It 'Counts warnings correctly' {
+            Mock Invoke-ScriptAnalyzer {
+                return @(
+                    [PSCustomObject]@{ Severity = 'Warning'; RuleName = 'Rule1'; Message = 'Warn1'; Line = 1; Column = 1 },
+                    [PSCustomObject]@{ Severity = 'Warning'; RuleName = 'Rule2'; Message = 'Warn2'; Line = 2; Column = 1 }
+                )
+            }
+
+            $testFile = Join-Path $script:TempDir 'warnings.ps1'
+            'Write-Host "test"' | Set-Content $testFile
+            $outPath = Join-Path $script:logsDir 'warn-results.json'
+            $configPath = Join-Path $PSScriptRoot '../../linting/PSScriptAnalyzer.psd1'
+
+            Invoke-PSScriptAnalysis -FilesToAnalyze @($testFile) -ConfigPath $configPath -OutputPath $outPath
+            Should -Invoke Set-GitHubOutput -ParameterFilter { $Name -eq 'warnings' -and $Value -eq 2 }
+        }
+
+        It 'Creates summary file' {
+            Mock Invoke-ScriptAnalyzer { @() }
+
+            $testFile = Join-Path $script:TempDir 'summary.ps1'
+            'Write-Host "test"' | Set-Content $testFile
+            $outPath = Join-Path $script:logsDir 'summary-results.json'
+            $configPath = Join-Path $PSScriptRoot '../../linting/PSScriptAnalyzer.psd1'
+
+            Invoke-PSScriptAnalysis -FilesToAnalyze @($testFile) -ConfigPath $configPath -OutputPath $outPath
+            Test-Path 'logs/psscriptanalyzer-summary.json' | Should -BeTrue
+        }
+    }
+
+    Context 'Environment variable setting' {
+        BeforeEach {
+            Mock Set-GitHubOutput {}
+            Mock Write-GitHubStepSummary {}
+            Mock Write-GitHubAnnotation {}
+        }
+
+        It 'Sets PSSCRIPTANALYZER_FAILED when errors found' {
+            Mock Set-GitHubEnv {}
+            Mock Invoke-ScriptAnalyzer {
+                return @(
+                    [PSCustomObject]@{ Severity = 'Error'; RuleName = 'Rule1'; Message = 'Error'; Line = 1; Column = 1 }
+                )
+            }
+
+            $testFile = Join-Path $script:TempDir 'env-test.ps1'
+            'Write-Host "test"' | Set-Content $testFile
+            $outPath = Join-Path $script:logsDir 'env-results.json'
+            $configPath = Join-Path $PSScriptRoot '../../linting/PSScriptAnalyzer.psd1'
+
+            Invoke-PSScriptAnalysis -FilesToAnalyze @($testFile) -ConfigPath $configPath -OutputPath $outPath
+            Should -Invoke Set-GitHubEnv -ParameterFilter { $Name -eq 'PSSCRIPTANALYZER_FAILED' -and $Value -eq 'true' }
+        }
+    }
+
+    Context 'FileInfo handling' {
+        BeforeEach {
+            Mock Invoke-ScriptAnalyzer { @() }
+            Mock Set-GitHubOutput {}
+            Mock Set-GitHubEnv {}
+            Mock Write-GitHubStepSummary {}
+            Mock Write-GitHubAnnotation {}
+        }
+
+        It 'Handles FileInfo objects in FilesToAnalyze' {
+            $testFile = Join-Path $script:TempDir 'fileinfo.ps1'
+            'Write-Host "test"' | Set-Content $testFile
+            $fileInfo = Get-Item $testFile
+            $outPath = Join-Path $script:logsDir 'fileinfo-results.json'
+            $configPath = Join-Path $PSScriptRoot '../../linting/PSScriptAnalyzer.psd1'
+
+            { Invoke-PSScriptAnalysis -FilesToAnalyze @($fileInfo) -ConfigPath $configPath -OutputPath $outPath } | Should -Not -Throw
+        }
+    }
+}
+
+#endregion
+

@@ -169,7 +169,7 @@ function Test-ExtensionManifestValid {
         $errors += "Missing required 'publisher' field"
     }
 
-    if (-not $ManifestContent.PSObject.Properties['engines']) {
+    if (-not $ManifestContent.PSObject.Properties['engines'] -or $null -eq $ManifestContent.engines) {
         $errors += "Missing required 'engines' field"
     } elseif (-not $ManifestContent.engines.PSObject.Properties['vscode']) {
         $errors += "Missing required 'engines.vscode' field"
@@ -406,38 +406,16 @@ function Invoke-ExtensionPackaging {
         return 1
     }
 
-    # Determine version
-    $baseVersion = if ($Version -and $Version -ne "") {
-        # Validate specified version format
-        if ($Version -notmatch '^\d+\.\d+\.\d+$') {
-            Write-Error "Invalid version format specified: '$Version'. Expected semantic version format (e.g., 1.0.0).`nPre-release suffixes like '-dev.123' should be added via -DevPatchNumber parameter, not in the version itself."
-            return 1
-        }
-        $Version
-    } else {
-        # Use version from package.json
-        $currentVersion = $packageJson.version
-        if ($currentVersion -notmatch '^\d+\.\d+\.\d+') {
-            $errorMessage = @(
-                "Invalid version format in package.json: '$currentVersion'.",
-                "Expected semantic version format (e.g., 1.0.0).",
-                "Pre-release suffixes should not be committed to package.json.",
-                "Use -DevPatchNumber parameter to add '-dev.N' suffix during packaging."
-            ) -join "`n"
-            Write-Error $errorMessage
-            return 1
-        }
-        # Extract base version (validation above ensures this will match)
-        $currentVersion -match '^(\d+\.\d+\.\d+)' | Out-Null
-        $Matches[1]
+    # Use pure function to resolve and validate version
+    $versionResult = Get-ResolvedPackageVersion -SpecifiedVersion $Version -ManifestVersion $packageJson.version -DevPatchNumber $DevPatchNumber
+
+    if (-not $versionResult.IsValid) {
+        Write-Error $versionResult.ErrorMessage
+        return 1
     }
 
-    # Apply dev patch number if provided
-    $packageVersion = if ($DevPatchNumber -and $DevPatchNumber -ne "") {
-        "$baseVersion-dev.$DevPatchNumber"
-    } else {
-        $baseVersion
-    }
+    $baseVersion = $versionResult.BaseVersion
+    $packageVersion = $versionResult.PackageVersion
 
     Write-Host "   Using version: $packageVersion" -ForegroundColor Green
 

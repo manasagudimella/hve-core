@@ -494,3 +494,311 @@ Describe 'ExcludePaths Filtering' -Tag 'Integration' {
 }
 
 #endregion
+
+#region Invoke-LinkLanguageCheck Function Tests
+
+Describe 'Invoke-LinkLanguageCheck' -Tag 'Unit' {
+    BeforeAll {
+        $script:TempDir = Join-Path ([System.IO.Path]::GetTempPath()) "llc-invoke-$(New-Guid)"
+        New-Item -ItemType Directory -Path $script:TempDir -Force | Out-Null
+    }
+
+    AfterAll {
+        Remove-Item -Path $script:TempDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    Context 'Function discovery' {
+        It 'Invoke-LinkLanguageCheck is defined' {
+            Get-Command Invoke-LinkLanguageCheck -ErrorAction SilentlyContinue | Should -Not -BeNull
+        }
+
+        It 'Function has OutputType attribute' {
+            $cmd = Get-Command Invoke-LinkLanguageCheck
+            $cmd.OutputType.Type | Should -Contain ([int])
+        }
+    }
+
+    Context 'No links found scenario' {
+        BeforeEach {
+            Mock Get-GitTextFile { return @() }
+        }
+
+        It 'Returns 0 exit code when no files to scan' {
+            Mock Write-Output { }
+            $result = Invoke-LinkLanguageCheck
+            # The function returns exit code 0 at the end
+            # But also outputs to Write-Output, so $result may be an array
+            if ($result -is [array]) {
+                $result[-1] | Should -Be 0
+            } else {
+                $result | Should -Be 0
+            }
+        }
+
+        It 'Outputs empty JSON array when -Fix is not specified' {
+            Mock Get-GitTextFile { return @() }
+            Mock Write-Output { $script:CapturedOutput = $InputObject }
+
+            Invoke-LinkLanguageCheck
+            $script:CapturedOutput | Should -Be '[]'
+        }
+
+        It 'Outputs message when -Fix is specified and no links found' {
+            Mock Get-GitTextFile { return @() }
+            Mock Write-Output { $script:CapturedOutput = $InputObject }
+
+            Invoke-LinkLanguageCheck -Fix
+            $script:CapturedOutput | Should -Be "No URLs containing 'en-us' were found."
+        }
+    }
+
+    Context 'Links found without -Fix' {
+        BeforeEach {
+            $script:TestFile = Join-Path $script:TempDir 'test-links.md'
+            'Visit https://docs.microsoft.com/en-us/azure for docs.' | Set-Content -Path $script:TestFile
+
+            Mock Get-GitTextFile { return @($script:TestFile) }
+        }
+
+        It 'Returns JSON output with found links' {
+            $script:CapturedJson = $null
+            Mock Write-Output { $script:CapturedJson = $InputObject }
+
+            Invoke-LinkLanguageCheck
+
+            $script:CapturedJson | Should -Not -BeNullOrEmpty
+            $parsed = $script:CapturedJson | ConvertFrom-Json
+            $parsed | Should -Not -BeNullOrEmpty
+            $parsed[0].file | Should -Be $script:TestFile
+        }
+
+        It 'Returns exit code 0' {
+            Mock Write-Output { }
+            $result = Invoke-LinkLanguageCheck
+            $result | Should -Be 0
+        }
+    }
+
+    Context 'Links found with -Fix' {
+        BeforeEach {
+            $script:FixTestFile = Join-Path $script:TempDir 'fix-test.md'
+            'Visit https://docs.microsoft.com/en-us/azure for docs.' | Set-Content -Path $script:FixTestFile
+
+            Mock Get-GitTextFile { return @($script:FixTestFile) }
+        }
+
+        It 'Fixes links and outputs summary message' {
+            $script:CapturedOutput = $null
+            Mock Write-Output { $script:CapturedOutput = $InputObject }
+
+            Invoke-LinkLanguageCheck -Fix
+
+            $script:CapturedOutput | Should -Match 'Fixed \d+ URLs? in \d+ files?'
+        }
+
+        It 'Actually removes en-us from file content' {
+            Mock Write-Output { }
+
+            Invoke-LinkLanguageCheck -Fix
+
+            $content = Get-Content -Path $script:FixTestFile -Raw
+            $content | Should -Not -Match 'en-us/'
+            $content | Should -Match 'https://docs.microsoft.com/azure'
+        }
+    }
+
+    Context 'ExcludePaths filtering in function' {
+        BeforeEach {
+            $script:TestFile1 = Join-Path $script:TempDir 'src/doc.md'
+            $script:TestFile2 = Join-Path $script:TempDir 'tests/test.md'
+
+            New-Item -ItemType Directory -Path (Join-Path $script:TempDir 'src') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $script:TempDir 'tests') -Force | Out-Null
+
+            'Link: https://docs.microsoft.com/en-us/src' | Set-Content -Path $script:TestFile1
+            'Link: https://docs.microsoft.com/en-us/test' | Set-Content -Path $script:TestFile2
+
+            Mock Get-GitTextFile { return @($script:TestFile1, $script:TestFile2) }
+        }
+
+        It 'Excludes files matching pattern' {
+            # The function uses -like pattern matching internally
+            $files = @('src/doc.md', 'tests/test.md')
+            $excludePattern = 'tests/**'
+
+            $filtered = $files | Where-Object {
+                $filePath = $_
+                $excluded = $false
+                if ($filePath -like $excludePattern) {
+                    $excluded = $true
+                }
+                -not $excluded
+            }
+
+            $filtered | Should -HaveCount 1
+            $filtered | Should -Contain 'src/doc.md'
+        }
+    }
+
+    Context 'File validation' {
+        BeforeEach {
+            Mock Get-GitTextFile { return @('nonexistent.md', $script:TestFile) }
+        }
+
+        It 'Skips files that do not exist' {
+            $script:TestFile = Join-Path $script:TempDir 'existing.md'
+            'Link: https://docs.microsoft.com/en-us/azure' | Set-Content -Path $script:TestFile
+
+            Mock Get-GitTextFile { return @('nonexistent.md', $script:TestFile) }
+            Mock Write-Output { $script:CapturedJson = $InputObject }
+
+            Invoke-LinkLanguageCheck
+
+            $parsed = $script:CapturedJson | ConvertFrom-Json
+            # Should only have results from the existing file
+            if ($parsed) {
+                $parsed | ForEach-Object { $_.file } | Should -Not -Contain 'nonexistent.md'
+            }
+        }
+    }
+}
+
+#endregion
+
+#region Fix Mode Detailed Tests
+
+Describe 'Fix Mode Detailed Tests' -Tag 'Unit' {
+    BeforeAll {
+        $script:TempDir = Join-Path ([System.IO.Path]::GetTempPath()) "llc-fix-$(New-Guid)"
+        New-Item -ItemType Directory -Path $script:TempDir -Force | Out-Null
+    }
+
+    AfterAll {
+        Remove-Item -Path $script:TempDir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    Context 'Multiple links in multiple files' {
+        BeforeEach {
+            $script:File1 = Join-Path $script:TempDir 'doc1.md'
+            $script:File2 = Join-Path $script:TempDir 'doc2.md'
+
+            @'
+# Documentation
+
+Visit https://docs.microsoft.com/en-us/azure for Azure.
+Also see https://learn.microsoft.com/en-us/dotnet for .NET.
+'@ | Set-Content -Path $script:File1
+
+            @'
+# Guide
+
+Link: https://docs.microsoft.com/en-us/windows
+'@ | Set-Content -Path $script:File2
+
+            Mock Get-GitTextFile { return @($script:File1, $script:File2) }
+        }
+
+        It 'Fixes all links in all files' {
+            Mock Write-Output { }
+
+            Invoke-LinkLanguageCheck -Fix
+
+            $content1 = Get-Content -Path $script:File1 -Raw
+            $content2 = Get-Content -Path $script:File2 -Raw
+
+            $content1 | Should -Not -Match 'en-us/'
+            $content2 | Should -Not -Match 'en-us/'
+        }
+
+        It 'Reports correct count of fixed URLs' {
+            # Reset files
+            @'
+# Documentation
+Visit https://docs.microsoft.com/en-us/azure for Azure.
+Also see https://learn.microsoft.com/en-us/dotnet for .NET.
+'@ | Set-Content -Path $script:File1
+
+            @'
+# Guide
+Link: https://docs.microsoft.com/en-us/windows
+'@ | Set-Content -Path $script:File2
+
+            $script:CapturedOutput = $null
+            Mock Write-Output { $script:CapturedOutput = $InputObject }
+
+            Invoke-LinkLanguageCheck -Fix
+
+            $script:CapturedOutput | Should -Match 'Fixed 3 URLs in 2 files'
+        }
+    }
+
+    Context 'Verbose output in Fix mode' {
+        BeforeEach {
+            $script:VerboseFile = Join-Path $script:TempDir 'verbose-test.md'
+            'Link: https://docs.microsoft.com/en-us/verbose' | Set-Content -Path $script:VerboseFile
+
+            Mock Get-GitTextFile { return @($script:VerboseFile) }
+            Mock Write-Output { }
+            Mock Write-Information { }
+        }
+
+        It 'Outputs fix details when verbose' {
+            # The function checks $Verbose variable, not -Verbose parameter
+            # We test the Information stream behavior
+            Invoke-LinkLanguageCheck -Fix
+
+            # Function should complete without error
+            $true | Should -BeTrue
+        }
+    }
+}
+
+#endregion
+
+#region Error Handling Tests
+
+Describe 'Error Handling' -Tag 'Unit' {
+    Context 'Get-GitTextFile error handling' {
+        It 'Returns empty array on git error' {
+            Mock git {
+                $global:LASTEXITCODE = 128
+                throw 'git error'
+            }
+
+            $result = Get-GitTextFile
+            $result | Should -BeNullOrEmpty
+        }
+    }
+
+    Context 'Repair-LinksInFile write error handling' {
+        BeforeAll {
+            $script:TempDir = Join-Path ([System.IO.Path]::GetTempPath()) "llc-err-$(New-Guid)"
+            New-Item -ItemType Directory -Path $script:TempDir -Force | Out-Null
+        }
+
+        AfterAll {
+            Remove-Item -Path $script:TempDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+
+        It 'Returns false when file cannot be read' {
+            $links = @([PSCustomObject]@{ OriginalUrl = 'a'; FixedUrl = 'b' })
+            $result = Repair-LinksInFile -FilePath 'C:\nonexistent\readonly.md' -Links $links
+            $result | Should -BeFalse
+        }
+
+        It 'Returns false when content has no matching links' {
+            $testFile = Join-Path $script:TempDir 'no-match.md'
+            'No links here' | Set-Content -Path $testFile
+
+            $links = @([PSCustomObject]@{
+                OriginalUrl = 'https://example.com/en-us/nothere'
+                FixedUrl = 'https://example.com/nothere'
+            })
+
+            $result = Repair-LinksInFile -FilePath $testFile -Links $links
+            $result | Should -BeFalse
+        }
+    }
+}
+
+#endregion

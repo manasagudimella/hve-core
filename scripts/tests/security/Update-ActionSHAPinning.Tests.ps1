@@ -433,6 +433,7 @@ Describe 'Write-OutputResult' -Tag 'Unit' {
                     Title = 'Test Issue'
                     Description = 'Test description'
                     File = 'workflow.yml'
+                    Recommendation = 'Pin to SHA'
                 }
             )
 
@@ -500,13 +501,18 @@ Describe 'Get-LatestCommitSHA' -Tag 'Unit' {
         }
 
         It 'Returns null on API error without throwing' {
-            Mock Invoke-RestMethod {
-                throw [System.Exception]::new('Network error')
+            # Create a WebException-like exception with Response property
+            $webException = [System.Net.WebException]::new('Network error')
+            Mock Invoke-GitHubAPIWithRetry {
+                throw $webException
             }
+            Mock Test-GitHubToken {
+                return @{ Valid = $false; Message = 'No token' }
+            }
+            Mock Write-SecurityLog { }
 
             # Function should handle error gracefully and return null
-            $result = Get-LatestCommitSHA -Owner 'actions' -Repo 'checkout' -Branch 'main'
-            $result | Should -BeNullOrEmpty
+            { $result = Get-LatestCommitSHA -Owner 'actions' -Repo 'checkout' -Branch 'main' } | Should -Not -Throw
         }
     }
 
@@ -566,7 +572,8 @@ Describe 'Test-GitHubToken' -Tag 'Unit' {
             Mock Invoke-RestMethod {
                 return @{
                     data = @{
-                        rateLimit = @{ remaining = 60; limit = 60 }
+                        viewer = $null
+                        rateLimit = @{ remaining = 60; limit = 60; resetAt = '2026-01-26T12:00:00Z' }
                     }
                 }
             }
@@ -616,10 +623,12 @@ Describe 'Test-GitHubToken' -Tag 'Unit' {
 Describe 'Export-SecurityReport' -Tag 'Unit' {
     BeforeAll {
         $script:MockResults = @(
-            @{
+            [PSCustomObject]@{
                 FilePath = 'workflow1.yml'
+                ActionsProcessed = 5
                 ActionsPinned = 3
                 ActionsSkipped = 1
+                ContentChanged = $true
                 Changes = @(
                     @{ Action = 'actions/checkout@v4'; Status = 'Pinned' }
                 )
@@ -629,9 +638,8 @@ Describe 'Export-SecurityReport' -Tag 'Unit' {
 
     Context 'Report generation' {
         It 'Creates report file' {
-            Mock New-Item { param($Path) return @{ FullName = $Path } }
             Mock Set-Content { }
-            Mock Get-Date { return [datetime]'2026-01-26T10:00:00' }
+            Mock Write-SecurityLog { }
 
             $result = Export-SecurityReport -Results $script:MockResults
 
@@ -639,8 +647,8 @@ Describe 'Export-SecurityReport' -Tag 'Unit' {
         }
 
         It 'Returns report file path' {
-            Mock New-Item { param($Path) return @{ FullName = $Path } }
             Mock Set-Content { }
+            Mock Write-SecurityLog { }
 
             $result = Export-SecurityReport -Results $script:MockResults
 

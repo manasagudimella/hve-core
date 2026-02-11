@@ -549,151 +549,71 @@ function Invoke-ExtensionPreparation {
     Write-Host ""
     Write-Host "🔍 Discovering chat agents..." -ForegroundColor Yellow
     $agentsDir = Join-Path $GitHubDir "agents"
-    $chatAgents = @()
 
     # Agents to exclude from extension packaging
     $excludedAgents = @()
 
-    if (Test-Path $agentsDir) {
-        $agentFiles = Get-ChildItem -Path $agentsDir -Filter "*.agent.md" | Sort-Object Name
+    $agentResult = Get-DiscoveredAgents -AgentsDir $agentsDir -AllowedMaturities $allowedMaturities -ExcludedAgents $excludedAgents
 
-        foreach ($agentFile in $agentFiles) {
-            # Extract agent name from filename (e.g., hve-core-installer.agent.md -> hve-core-installer)
-            $agentName = $agentFile.BaseName -replace '\.agent$', ''
-
-            # Skip excluded agents
-            if ($excludedAgents -contains $agentName) {
-                Write-Host "   ⏭️  $agentName (excluded)" -ForegroundColor DarkGray
-                continue
-            }
-
-            # Extract frontmatter data
-            $frontmatter = Get-FrontmatterData -FilePath $agentFile.FullName -FallbackDescription "AI agent for $agentName"
-            $description = $frontmatter.description
-            $maturity = $frontmatter.maturity
-
-            # Filter by maturity based on channel
-            if ($allowedMaturities -notcontains $maturity) {
-                Write-Host "   ⏭️  $agentName (maturity: $maturity, skipped for $Channel)" -ForegroundColor DarkGray
-                continue
-            }
-
-            $agent = [PSCustomObject]@{
-                name        = $agentName
-                path        = "./.github/agents/$($agentFile.Name)"
-                description = $description
-            }
-
-            $chatAgents += $agent
-            Write-Host "   ✅ $agentName" -ForegroundColor Green
-        }
-    } else {
+    if (-not $agentResult.DirectoryExists) {
         Write-Warning "Agents directory not found: $agentsDir"
+    } else {
+        foreach ($skipped in $agentResult.Skipped) {
+            Write-Host "   ⏭️  $($skipped.Name) ($($skipped.Reason))" -ForegroundColor DarkGray
+        }
+        foreach ($agent in $agentResult.Agents) {
+            Write-Host "   ✅ $($agent.name)" -ForegroundColor Green
+        }
     }
+    $chatAgents = $agentResult.Agents
 
     # Discover prompts
     Write-Host ""
     Write-Host "🔍 Discovering prompts..." -ForegroundColor Yellow
     $promptsDir = Join-Path $GitHubDir "prompts"
-    $chatPromptFiles = @()
 
-    if (Test-Path $promptsDir) {
-        $promptFiles = Get-ChildItem -Path $promptsDir -Filter "*.prompt.md" -Recurse | Sort-Object Name
+    $promptResult = Get-DiscoveredPrompts -PromptsDir $promptsDir -GitHubDir $GitHubDir -AllowedMaturities $allowedMaturities
 
-        foreach ($promptFile in $promptFiles) {
-            # Extract prompt name from filename (e.g., git-commit.prompt.md -> git-commit)
-            $promptName = $promptFile.BaseName -replace '\.prompt$', ''
-
-            # Extract frontmatter data
-            $displayName = ($promptName -replace '-', ' ') -replace '(\b\w)', { $_.Groups[1].Value.ToUpper() }
-            $frontmatter = Get-FrontmatterData -FilePath $promptFile.FullName -FallbackDescription "Prompt for $displayName"
-            $description = $frontmatter.description
-            $maturity = $frontmatter.maturity
-
-            # Filter by maturity based on channel
-            if ($allowedMaturities -notcontains $maturity) {
-                Write-Host "   ⏭️  $promptName (maturity: $maturity, skipped for $Channel)" -ForegroundColor DarkGray
-                continue
-            }
-
-            # Calculate relative path from .github
-            $relativePath = [System.IO.Path]::GetRelativePath($GitHubDir, $promptFile.FullName) -replace '\\', '/'
-
-            $prompt = [PSCustomObject]@{
-                name        = $promptName
-                path        = "./.github/$relativePath"
-                description = $description
-            }
-
-            $chatPromptFiles += $prompt
-            Write-Host "   ✅ $promptName" -ForegroundColor Green
-        }
-    } else {
+    if (-not $promptResult.DirectoryExists) {
         Write-Warning "Prompts directory not found: $promptsDir"
+    } else {
+        foreach ($skipped in $promptResult.Skipped) {
+            Write-Host "   ⏭️  $($skipped.Name) ($($skipped.Reason))" -ForegroundColor DarkGray
+        }
+        foreach ($prompt in $promptResult.Prompts) {
+            Write-Host "   ✅ $($prompt.name)" -ForegroundColor Green
+        }
     }
+    $chatPromptFiles = $promptResult.Prompts
 
     # Discover instruction files
     Write-Host ""
     Write-Host "🔍 Discovering instruction files..." -ForegroundColor Yellow
     $instructionsDir = Join-Path $GitHubDir "instructions"
-    $chatInstructions = @()
 
-    if (Test-Path $instructionsDir) {
-        $instructionFiles = Get-ChildItem -Path $instructionsDir -Filter "*.instructions.md" -Recurse | Sort-Object Name
+    $instrResult = Get-DiscoveredInstructions -InstructionsDir $instructionsDir -GitHubDir $GitHubDir -AllowedMaturities $allowedMaturities
 
-        foreach ($instrFile in $instructionFiles) {
-            # Extract instruction name from filename (e.g., commit-message.instructions.md -> commit-message-instructions)
-            $baseName = $instrFile.BaseName -replace '\.instructions$', ''
-            $instrName = "$baseName-instructions"
-
-            # Extract frontmatter data
-            $displayName = ($baseName -replace '-', ' ') -replace '(\b\w)', { $_.Groups[1].Value.ToUpper() }
-            $frontmatter = Get-FrontmatterData -FilePath $instrFile.FullName -FallbackDescription "Instructions for $displayName"
-            $description = $frontmatter.description
-            $maturity = $frontmatter.maturity
-
-            # Filter by maturity based on channel
-            if ($allowedMaturities -notcontains $maturity) {
-                Write-Host "   ⏭️  $instrName (maturity: $maturity, skipped for $Channel)" -ForegroundColor DarkGray
-                continue
-            }
-
-            # Calculate relative path from .github using cross-platform APIs
-            $relativePathFromGitHub = [System.IO.Path]::GetRelativePath($GitHubDir, $instrFile.FullName)
-            $normalizedRelativePath = (Join-Path ".github" $relativePathFromGitHub) -replace '\\', '/'
-
-            $instruction = [PSCustomObject]@{
-                name        = $instrName
-                path        = "./$normalizedRelativePath"
-                description = $description
-            }
-
-            $chatInstructions += $instruction
-            Write-Host "   ✅ $instrName" -ForegroundColor Green
-        }
-    } else {
+    if (-not $instrResult.DirectoryExists) {
         Write-Warning "Instructions directory not found: $instructionsDir"
+    } else {
+        foreach ($skipped in $instrResult.Skipped) {
+            Write-Host "   ⏭️  $($skipped.Name) ($($skipped.Reason))" -ForegroundColor DarkGray
+        }
+        foreach ($instr in $instrResult.Instructions) {
+            Write-Host "   ✅ $($instr.name)" -ForegroundColor Green
+        }
     }
+    $chatInstructions = $instrResult.Instructions
 
     # Update package.json
     Write-Host ""
     Write-Host "📝 Updating package.json..." -ForegroundColor Yellow
 
-    # Ensure contributes section exists
-    if (-not $packageJson.contributes) {
-        $packageJson | Add-Member -NotePropertyName "contributes" -NotePropertyValue ([PSCustomObject]@{})
-    }
+    # Use pure function to update contributes
+    $packageJson = Update-PackageJsonContributes -PackageJson $packageJson -ChatAgents $chatAgents -ChatPromptFiles $chatPromptFiles -ChatInstructions $chatInstructions
 
-    # Update chatAgents
-    $packageJson.contributes.chatAgents = $chatAgents
     Write-Host "   Updated chatAgents: $($chatAgents.Count) agents" -ForegroundColor Green
-
-    # Update chatPromptFiles
-    $packageJson.contributes.chatPromptFiles = $chatPromptFiles
     Write-Host "   Updated chatPromptFiles: $($chatPromptFiles.Count) prompts" -ForegroundColor Green
-
-    # Update chatInstructions
-    $packageJson.contributes.chatInstructions = $chatInstructions
     Write-Host "   Updated chatInstructions: $($chatInstructions.Count) files" -ForegroundColor Green
 
     if ($DryRun) {
