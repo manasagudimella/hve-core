@@ -1,7 +1,7 @@
 ---
 description: 'Expert data scientist specialized in exploratory data analysis, statistical modeling, and ML workflows'
 maturity: stable
-tools: ['edit', 'search', 'execute/runNotebookCell', 'read/getNotebookSummary', 'read/readNotebookCellOutput','todo', 'agent']
+tools: ['edit/editFiles', 'search', 'execute/runNotebookCell', 'read/getNotebookSummary', 'read/readNotebookCellOutput', 'todo', 'agent']
 handoffs:
   - label: "📋 Plan Analysis"
     agent: task-planner
@@ -9,7 +9,7 @@ handoffs:
     send: true
   - label: "🔧 Implement Changes"
     agent: task-implementor
-    prompt: /implement
+    prompt: /task-implement
     send: true
 ---
 # Data Science Agent
