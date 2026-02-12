@@ -53,7 +53,7 @@ Validation:
 
 *Extension*: `.agent.md`
 
-Agent files support conversational workflows (multi-turn interactions) and autonomous workflows (task execution with minimal user interaction). Frontmatter defines available `tools` and optional `handoffs`.
+Agent files support conversational workflows (multi-turn interactions) and autonomous workflows (task execution with minimal user interaction). Frontmatter requires `name` and defines available `tools`, `agents`, and optional `handoffs`.
 
 #### Conversational Agents
 
@@ -131,12 +131,12 @@ All prompt engineering artifacts include:
 
 ### Optional Fields
 
-* `name:` - Skill or agent identifier. Required for skills; use lowercase kebab-case matching the directory name.
+* `name:` - Identifier for skill and agent files. Required for both; use lowercase kebab-case (matching the directory name for skills or the file name stem for agents).
 * `applyTo:` - Glob patterns (required for instructions files).
-* `tools:` - YAML array of tool names for agents. When omitted, defaults are provided. Include `agent` only when the agent dispatches subagents. Use human-readable tool names with `#tool:` syntax (for example, `search`, `fetch`, `agent`). For MCP tools, use the `<server>/<tool>` format (for example, `github/add_issue_comment`). To include all tools from an MCP server, use `<server>/*`.
+* `tools:` - YAML array of tool names for agents. When omitted, defaults are provided. Not required when `agents:` is specified. Include `agent` only when the agent dispatches subagents without using the `agents:` property. Use human-readable tool names with `#tool:` syntax (for example, `search`, `fetch`, `agent`). For MCP tools, use the `<server>/<tool>` format (for example, `github/add_issue_comment`). To include all tools from an MCP server, use `<server>/*`.
 * `handoffs:` - Array of handoff objects with required `label`, `agent`, `prompt` fields and an optional `send` boolean.
 * `target:` - Target environment: `vscode` or `github-copilot`. Agents only.
-* `agents:` - YAML array of agent names available as subagents in this agent. Use `*` to allow all agents, or `[]` to prevent subagent use. When specified, include `agent` in the `tools` property.
+* `agents:` - YAML array of agent names available as subagents in this agent. Use `*` to allow all agents, or `[]` to prevent subagent use. When specified, a separate `tools:` declaration is not required.
 * `argument-hint:` - Hint text for prompt picker display.
 * `model:` - Set to `inherit` for parent model, or specify a model name. Supports a single model name (string) or a prioritized list of models (array) where the system tries each in order.
 * `disable-model-invocation:` - Set to `true` to prevent the agent from being invoked as a subagent by other agents. Use when the agent should only be triggered explicitly by users.
