@@ -11,12 +11,12 @@ Refactor and clean up the specified prompt engineering artifact.
 
 ## Inputs
 
-* ${input:file}: (Required) Target prompt file to refactor. Accepts `.prompt.md`, `.agent.md`, or `.instructions.md` files.
+* ${input:files}: (Optional) Target prompt file(s) to refactor. Defaults to the current open file or attached files.
 * ${input:requirements}: (Optional) Additional refactoring focus areas.
 
 ## Mode
 
-Operate in **refactor** mode — run the full workflow (Phases 1 through 5) with refactoring emphasis.
+Operate in **refactor** mode for all Required Phases.
 
 Refactor mode behavior:
 
@@ -28,4 +28,4 @@ Refactor mode behavior:
 
 ---
 
-Proceed with refactoring the target file.
+Proceed with refactoring the target file(s).

@@ -1,17 +1,17 @@
 ---
 description: "Evaluates prompt engineering artifacts against quality criteria and reports findings - Brought to you by microsoft/hve-core"
-argument-hint: "file=..."
+argument-hint: "[files=...]"
 agent: 'prompt-builder'
 maturity: stable
 ---
 
 # Prompt Analyze
 
-Evaluate the specified prompt engineering artifact against quality criteria without modifying it.
+Evaluate the specified prompt engineering artifact(s) against quality criteria without modifying it.
 
 ## Inputs
 
-* ${input:file}: (Required) Target prompt file to analyze. Accepts `.prompt.md`, `.agent.md`, or `.instructions.md` files.
+* ${input:files}: (Optional) Target prompt file(s) to analyze. Defaults to the current open file or attached files.
 
 ## Mode
 
@@ -26,4 +26,4 @@ Analyze mode behavior:
 
 ---
 
-Proceed with analysis of the target file.
+Proceed with analysis of the target file(s).
