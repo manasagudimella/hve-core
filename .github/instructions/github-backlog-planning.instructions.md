@@ -623,12 +623,12 @@ Discover the repository's milestone strategy at runtime by analyzing open milest
 
 ### Discovery Steps
 
-1. Discover open milestones by sampling recent open issues. Call `mcp_github_search_issues` with `repo:{owner}/{repo} is:issue is:open` sorted by `updated` descending, retrieving up to 100 results. Extract the `milestone` object from each result and aggregate unique milestones by title. Collect available fields (title, description, due_on, state, open_issues, closed_issues) from the milestone objects. Sort discovered milestones by due date ascending (nearest first). This approach may not surface milestones with zero open issues; when comprehensive coverage is required, check for `.github/milestone-strategy.yml` as a supplement.
+1. Discover open milestones by sampling recent open issues. Call `mcp_github_search_issues` with `repo:{owner}/{repo} is:issue is:open` sorted by `updated` descending, retrieving up to 100 results. Extract the `milestone` object from each result and aggregate unique milestones by title. Collect available fields (title, description, due_on, state, open_issues, closed_issues) from the milestone objects. Sort discovered milestones by due date ascending (nearest first). This approach may not surface milestones with zero open issues; when comprehensive coverage is required, optionally read the repo-specific override file `.github/milestone-strategy.yml` if it exists. When the file is not present, rely solely on the discovered milestones.
 2. Detect the dominant naming pattern from milestone titles using the rules in Naming Pattern Detection.
 3. Classify each milestone into an abstract role (`stable`, `pre-release`, `current`, `next`, `backlog`, `any`, `unclassified`) using the signal weighting in Role Classification. The `any` role means the label does not constrain milestone selection.
 4. Build the assignment map linking issue characteristics to target roles using the Assignment Map.
 5. Record the detected naming pattern, per-milestone role classification, generated assignment map, and confidence level (high, medium, low) in planning-log.md.
-6. When confidence is low, check for `.github/milestone-strategy.yml` in the repository. If found, apply the declared strategy. If not found, present the discovered milestones to the user and request classification. When no user input is available, assign `unclassified` and flag for human review.
+6. When confidence is low, optionally check for the repo-specific override file `.github/milestone-strategy.yml` in the repository. If the file exists, apply the declared strategy. If the file does not exist, treat its absence as expected, present the discovered milestones to the user and request classification. When no user input is available, assign `unclassified` and flag for human review.
 
 ### Naming Pattern Detection
 
@@ -653,25 +653,28 @@ For CalVer, sprint, and feature naming patterns, apply the same date-based rule 
 
 ### Assignment Map
 
-Map issue characteristics to target milestone roles (stability and proximity) after completing the discovery steps.
+Map issue characteristics to target milestone roles after completing the discovery steps. Each entry specifies a stability target and a proximity target independently.
 
-| Issue Characteristic         | Target Milestone Roles (stability, proximity) |
-| ---------------------------- | --------------------------------------------- |
-| Bug fix (production)         | nearest stable or current                     |
-| Security vulnerability       | nearest stable or current (expedited)         |
-| Maintenance and refactoring  | nearest stable or current                     |
-| Documentation improvement    | nearest stable or current                     |
-| New feature                  | nearest pre-release or next               |
-| Breaking change              | nearest pre-release or next               |
-| Experimental capability      | nearest pre-release or next               |
-| Infrastructure improvement   | nearest stable or current                 |
-| Low-risk enhancement         | nearest stable or current                 |
-| High-risk enhancement        | nearest pre-release or next               |
+| Issue Characteristic         | Stability Target | Proximity Target |
+| ---------------------------- | ---------------- | ---------------- |
+| Bug fix (production)         | stable           | current          |
+| Security vulnerability       | stable           | current          |
+| Maintenance and refactoring  | stable           | current          |
+| Documentation improvement    | stable           | current          |
+| New feature                  | pre-release      | next             |
+| Breaking change              | pre-release      | next             |
+| Experimental capability      | pre-release      | next             |
+| Infrastructure improvement   | stable           | current          |
+| Low-risk enhancement         | stable           | current          |
+| High-risk enhancement        | pre-release      | next             |
 
-Compound role expressions combine a stability criterion (stable or pre-release) with a proximity criterion (current, next, backlog). Resolve them as follows:
+Resolve milestone selection deterministically using these targets:
 
-* For "nearest stable or current", first consider milestones classified as stable and choose the nearest among them. Only if no stable milestone exists, fall back to the nearest current milestone.
-* For "nearest pre-release or next", first consider milestones classified as pre-release and choose the nearest among them. Only if no pre-release milestone exists, fall back to the nearest next milestone.
+* First, prefer milestones that match both the stability target and the proximity target. Among these, choose the nearest by due date.
+* If no milestone matches both targets, relax stability and prefer any milestone with the target proximity. Among these, choose the nearest by due date.
+* If neither the combined target nor the proximity target can be satisfied (for example, in very sparse backlogs), choose the nearest suitable milestone by due date regardless of stability or proximity and document the rationale in the planning notes.
+
+Security vulnerabilities follow the same resolution logic but are escalated in priority: they skip lower-priority work in the target milestone and ship in the earliest available release.
 
 When uncertain about milestone assignment, or when no milestone clearly matches these rules, default to the nearest pre-release or next milestone and flag for human review.
 ## Issue Field Matrix

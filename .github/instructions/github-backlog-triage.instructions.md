@@ -37,7 +37,7 @@ Before analyzing issues, discover the repository's milestone strategy. When `mil
 
 1. Invoke the milestone discovery protocol defined in the Milestone Discovery Protocol section of `github-backlog-planning.instructions.md` to fetch, classify, and build the milestone assignment map.
 2. Record the detected naming pattern, per-milestone role classification, and generated assignment map in planning-log.md.
-3. When discovery confidence is low, check for `.github/milestone-strategy.yml` or prompt the user before proceeding.
+3. When discovery confidence is low, attempt to load `.github/milestone-strategy.yml` as an optional override; if the file is not present or does not define a clear strategy, prompt the user before proceeding.
 
 When milestone discovery yields no results, prompt the user for milestone names before proceeding.
 
@@ -170,15 +170,15 @@ Additional scope keywords may be mapped when they align with the label taxonomy 
 
 Milestone assignment follows the versioning strategy discovered during Phase 1, Step 1. Apply these recommendations based on issue characteristics.
 
-| Issue Characteristic        | Recommended Milestone Role    | Rationale                                          |
-| --------------------------- | ----------------------------- | -------------------------------------------------- |
-| Bug fix                     | stable or current             | Production fixes target the nearest stable release |
-| Security fix                | stable or current (expedited) | Security patches ship in the nearest stable release |
-| Maintenance or refactoring  | stable or current             | Low-risk changes target stable releases            |
-| Documentation improvement   | stable or current             | Documentation ships with stable releases           |
-| New feature                 | pre-release or next           | Features incubate before stable release            |
-| Breaking change             | pre-release or next           | Breaking changes land in development milestones    |
-| Infrastructure improvement  | stable or current             | CI/CD and build changes target stable releases     |
+| Issue Characteristic        | Stability Target | Proximity Target | Rationale                                          |
+| --------------------------- | ---------------- | ---------------- | -------------------------------------------------- |
+| Bug fix                     | stable           | current          | Production fixes target the nearest stable release |
+| Security fix                | stable           | current          | Security patches ship in the nearest stable release |
+| Maintenance or refactoring  | stable           | current          | Low-risk changes target stable releases            |
+| Documentation improvement   | stable           | current          | Documentation ships with stable releases           |
+| New feature                 | pre-release      | next             | Features incubate before stable release            |
+| Breaking change             | pre-release      | next             | Breaking changes land in development milestones    |
+| Infrastructure improvement  | stable           | current          | CI/CD and build changes target stable releases     |
 
 When uncertain about milestone assignment, default to the nearest pre-release or next milestone and flag the issue for human review.
 
