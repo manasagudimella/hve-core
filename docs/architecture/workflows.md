@@ -140,16 +140,16 @@ The release-please job includes a commit-message guard that skips execution when
 
 ### Main Branch Jobs
 
-| Job                       | Purpose                        | Dependencies                                 |
-|---------------------------|--------------------------------|----------------------------------------------|
-| spell-check               | Post-merge spelling validation | None                                         |
-| markdown-lint             | Post-merge markdown validation | None                                         |
-| table-format              | Post-merge table validation    | None                                         |
-| dependency-pinning-scan   | Security pinning check         | None                                         |
-| pester-tests              | PowerShell unit tests          | None                                         |
+| Job                       | Purpose                        | Dependencies                                     |
+|---------------------------|--------------------------------|--------------------------------------------------|
+| spell-check               | Post-merge spelling validation | None                                             |
+| markdown-lint             | Post-merge markdown validation | None                                             |
+| table-format              | Post-merge table validation    | None                                             |
+| dependency-pinning-scan   | Security pinning check         | None                                             |
+| pester-tests              | PowerShell unit tests          | None                                             |
 | release-please            | Automated release management   | All validation jobs (skipped on release commits) |
-| extension-package-release | Build release VSIX             | release-please (conditional)                 |
-| attest-and-upload         | Sign and upload VSIX           | extension-package-release                    |
+| extension-package-release | Build release VSIX             | release-please (conditional)                     |
+| attest-and-upload         | Sign and upload VSIX           | extension-package-release                        |
 
 When release-please creates a release, the `extension-package-release` job builds the VSIX with the correct version, and `attest-and-upload` signs it with Sigstore attestation before uploading to the GitHub Release.
 
