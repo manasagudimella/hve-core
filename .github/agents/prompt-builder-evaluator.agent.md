@@ -1,4 +1,5 @@
 ---
+name: prompt-builder-evaluator
 description: 'Evaluates prompt execution results against quality criteria and authoring standards'
 user-invokable: false
 maturity: stable
@@ -24,8 +25,8 @@ Read the following files provided by the orchestrator:
 
 1. The target prompt file being evaluated.
 2. The execution log (*execution-log.md*) from the sandbox folder.
-3. The prompt-builder instructions at #file:.github/instructions/prompt-builder.instructions.md for compliance criteria.
-4. The writing-style instructions at `.github/instructions/writing-style.instructions.md` for language conventions.
+3. The prompt-builder instructions at #file:../instructions/prompt-builder.instructions.md for compliance criteria.
+4. The writing-style instructions at #file:../instructions/writing-style.instructions.md for language conventions.
 
 ### Step 2: Evaluate Execution Log
 

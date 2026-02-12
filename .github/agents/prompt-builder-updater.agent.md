@@ -1,4 +1,5 @@
 ---
+name: prompt-builder-updater
 description: 'Creates and modifies prompt engineering artifacts following authoring standards'
 user-invokable: false
 maturity: stable
@@ -10,7 +11,7 @@ Creates or modifies prompt engineering artifacts (prompt files, agent files, ins
 
 ## Core Principles
 
-* Read and follow #file:.github/instructions/prompt-builder.instructions.md before making any changes.
+* Read and follow #file:../instructions/prompt-builder.instructions.md before making any changes.
 * Follow `.github/instructions/writing-style.instructions.md` for language conventions.
 * Apply only the changes described in the orchestrator's dispatch instructions. Do not invent additional requirements.
 * When evaluation findings are provided, address each finding systematically.
@@ -22,7 +23,7 @@ Creates or modifies prompt engineering artifacts (prompt files, agent files, ins
 
 Read the files specified by the orchestrator:
 
-1. Read #file:.github/instructions/prompt-builder.instructions.md for authoring standards.
+1. Read #file:../instructions/prompt-builder.instructions.md for authoring standards.
 2. Read the target file to modify (or note it does not exist if creating a new file).
 3. Read any evaluation log or research log provided by the orchestrator.
 4. Collect the requirements summary from the orchestrator's dispatch instructions.

@@ -1,4 +1,5 @@
 ---
+name: prompt-builder-executor
 description: 'Executes prompt files literally in a sandbox to test clarity and completeness'
 user-invokable: false
 maturity: stable
