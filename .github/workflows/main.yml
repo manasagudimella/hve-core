@@ -96,33 +96,17 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # Bridge: GitHub does not create git tags for draft releases, but
-      # release-please needs the tag to anchor version calculations for
-      # subsequent release PRs. Without it, release-please scans the full
-      # commit history, may find an old breaking change, and proposes a
-      # wrong major bump. The force-tag-creation config option (release-please
-      # v17.2.0+) would handle this natively, but v4.4.0 of the action
-      # bundles v17.1.3. Remove this step once the action upgrades past
-      # v17.2.0. See: https://github.com/googleapis/release-please/pull/2423
-      - name: Create git tag for draft release
+      # Bridge: release-please creates a published release so it can
+      # anchor version calculations in the same run. Convert to draft
+      # immediately so assets can be uploaded to a mutable release.
+      # The publish-release job converts back to published after upload.
+      - name: Convert release to draft for asset upload
         if: ${{ steps.release.outputs.release_created == 'true' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          TAG="${{ steps.release.outputs.tag_name }}"
-          echo "Creating tag $TAG at ${{ github.sha }}"
-          if ! OUTPUT=$(gh api "repos/${{ github.repository }}/git/refs" \
-            --method POST \
-            -f ref="refs/tags/$TAG" \
-            -f sha="${{ github.sha }}" 2>&1); then
-            if echo "$OUTPUT" | grep -qi "Reference already exists"; then
-              echo "::warning::Tag $TAG already exists, skipping"
-            else
-              echo "::error::Failed to create tag $TAG"
-              echo "$OUTPUT" >&2
-              exit 1
-            fi
-          fi
+          gh release edit "${{ steps.release.outputs.tag_name }}" \
+            --draft=true -R "${{ github.repository }}"
 
   extension-package-release:
     name: Package VS Code Extensions (Release)
