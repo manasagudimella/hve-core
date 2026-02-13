@@ -1,7 +1,6 @@
 ---
 applyTo: '**/*.sh'
 description: 'Instructions for bash script implementation - Brought to you by microsoft/edge-ai'
-maturity: stable
 ---
 
 # Bash Script Instructions
@@ -105,12 +104,12 @@ fi
 
 ### Naming Conventions
 
-| Type | Convention | Example |
-| ---- | ---------- | ------- |
-| Environment variables | UPPER_SNAKE_CASE | `RESOURCE_GROUP_NAME` |
-| Constants | UPPER_SNAKE_CASE with `readonly` | `readonly MAX_RETRIES=3` |
-| Local variables | lower_snake_case | `local file_path` |
-| Function names | lower_snake_case | `validate_input()` |
+| Type                  | Convention                       | Example                  |
+|-----------------------|----------------------------------|--------------------------|
+| Environment variables | UPPER_SNAKE_CASE                 | `RESOURCE_GROUP_NAME`    |
+| Constants             | UPPER_SNAKE_CASE with `readonly` | `readonly MAX_RETRIES=3` |
+| Local variables       | lower_snake_case                 | `local file_path`        |
+| Function names        | lower_snake_case                 | `validate_input()`       |
 
 ### Variable Expansion
 

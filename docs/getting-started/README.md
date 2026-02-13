@@ -45,7 +45,7 @@ For customization or version control, see [Installing HVE-Core](install.md) to c
 
 ### Installation Methods
 
-HVE-Core supports seven installation methods. See the [installation guide](install.md) for a decision matrix to help you choose:
+HVE-Core supports eight installation methods. See the [installation guide](install.md) for a decision matrix to help you choose:
 
 | Method                                        | Best For                      |
 |-----------------------------------------------|-------------------------------|
@@ -56,6 +56,7 @@ HVE-Core supports seven installation methods. See the [installation guide](insta
 | [Git-Ignored Folder](methods/git-ignored.md)  | Local devcontainer, solo      |
 | [Mounted Directory](methods/mounted.md)       | Advanced devcontainer sharing |
 | [GitHub Codespaces](methods/codespaces.md)    | Codespaces-only projects      |
+| [Copilot CLI Plugins](methods/cli-plugins.md) | Terminal-based CLI workflows  |
 
 ## Verifying Setup
 
@@ -83,7 +84,7 @@ After installation, verify everything works:
 #### Copilot not discovering customizations
 
 - For Multi-Root: Ensure you opened the `.code-workspace` file, not just the folder
-- Verify `chat.modeFilesLocations` points to the correct path
+- Verify `chat.agentFilesLocations` points to the correct path
 - Check the window title shows the workspace name
 
 #### Git or clone errors
@@ -109,6 +110,7 @@ Copy the scripts you need to your project's `scripts/` directory and adjust path
 
 - Try [Your First Workflow](first-workflow.md) for a quick start
 - Learn the [RPI Workflow](../rpi/README.md) for complex tasks
+- Browse the [Agent Catalog](../agents/README.md) for all agent system documentation
 - Explore [Agents](../../.github/CUSTOM-AGENTS.md) for available agents
 - Review [Instructions](../../.github/instructions/README.md) for coding guidelines
 - Check the [README](../../README.md) for feature overview

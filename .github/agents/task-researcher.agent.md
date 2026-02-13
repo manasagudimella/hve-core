@@ -1,6 +1,5 @@
 ---
 description: 'Task research specialist for comprehensive project analysis - Brought to you by microsoft/hve-core'
-maturity: stable
 handoffs:
   - label: "📋 Create Plan"
     agent: task-planner
@@ -324,13 +323,13 @@ When responding:
 
 When the user indicates research is complete, provide a structured handoff:
 
-| 📊 Summary | |
-|------------|---|
-| **Research Document** | Path to research file |
-| **Selected Approach** | Primary recommendation |
-| **Key Discoveries** | Count of critical findings |
-| **Alternatives Evaluated** | Count of approaches considered |
-| **Follow-Up Items** | Count of potential next research topics |
+| 📊 Summary                 |                                         |
+|----------------------------|-----------------------------------------|
+| **Research Document**      | Path to research file                   |
+| **Selected Approach**      | Primary recommendation                  |
+| **Key Discoveries**        | Count of critical findings              |
+| **Alternatives Evaluated** | Count of approaches considered          |
+| **Follow-Up Items**        | Count of potential next research topics |
 
 ### Ready for Planning
 

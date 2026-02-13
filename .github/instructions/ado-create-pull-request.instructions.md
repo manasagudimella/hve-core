@@ -1,7 +1,6 @@
 ---
 description: "Required protocol for creating Azure DevOps pull requests with work item discovery, reviewer identification, and automated linking."
 applyTo: '**/.copilot-tracking/pr/new/**'
-maturity: stable
 ---
 
 # Azure DevOps Pull Request Creation
@@ -296,16 +295,16 @@ All PR creation tracking artifacts reside in `.copilot-tracking/pr/new/{{normali
 
 ## Phase Progress
 
-| Phase | Status | Notes |
-|-------|--------|-------|
-| Phase 1: Setup | [Complete/In Progress/Pending] | [Notes] |
-| Phase 2: PR Description | [Complete/In Progress/Pending] | [Notes] |
-| Phase 3: Work Item Discovery | [Complete/In Progress/Pending/Skipped] | [Notes] |
-| Phase 3a: Work Item Creation | [Complete/In Progress/Pending/Skipped] | [Notes] |
-| Phase 4: Reviewer Identification | [Complete/In Progress/Pending] | [Notes] |
-| Phase 5: User Confirmation | [Complete/In Progress/Pending/Skipped] | [Notes] |
-| Phase 6: PR Creation | [Complete/In Progress/Pending] | [Notes] |
-| Phase 7: Final Recap | [Complete/In Progress/Pending] | [Notes] |
+| Phase                            | Status                                 | Notes   |
+|----------------------------------|----------------------------------------|---------|
+| Phase 1: Setup                   | [Complete/In Progress/Pending]         | [Notes] |
+| Phase 2: PR Description          | [Complete/In Progress/Pending]         | [Notes] |
+| Phase 3: Work Item Discovery     | [Complete/In Progress/Pending/Skipped] | [Notes] |
+| Phase 3a: Work Item Creation     | [Complete/In Progress/Pending/Skipped] | [Notes] |
+| Phase 4: Reviewer Identification | [Complete/In Progress/Pending]         | [Notes] |
+| Phase 5: User Confirmation       | [Complete/In Progress/Pending/Skipped] | [Notes] |
+| Phase 6: PR Creation             | [Complete/In Progress/Pending]         | [Notes] |
+| Phase 7: Final Recap             | [Complete/In Progress/Pending]         | [Notes] |
 
 ## Artifacts
 

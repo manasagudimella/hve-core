@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # SPDX-License-Identifier: MIT
+#Requires -Version 7.0
 
 <#
 .SYNOPSIS
@@ -16,6 +17,7 @@ Git branch used as the comparison base. Defaults to "main".
 .PARAMETER ExcludeMarkdownDiff
 When supplied, excludes markdown (*.md) files from the diff output.
 #>
+
 [CmdletBinding()]
 param(
     [Parameter()]
@@ -26,6 +28,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
 Import-Module (Join-Path $PSScriptRoot "../lib/Modules/CIHelpers.psm1") -Force
 
 function Test-GitAvailability {
@@ -485,16 +488,15 @@ System.IO.FileInfo
 }
 
 #region Main Execution
-try {
-    # Execute only when run directly, not when dot-sourced for testing
-    if ($MyInvocation.InvocationName -ne '.') {
+if ($MyInvocation.InvocationName -ne '.') {
+    try {
         Invoke-PrReferenceGeneration -BaseBranch $BaseBranch -ExcludeMarkdownDiff:$ExcludeMarkdownDiff | Out-Null
         exit 0
     }
-}
-catch {
-    Write-Error "Generate PR Reference failed: $($_.Exception.Message)"
-    Write-CIAnnotation -Message $_.Exception.Message -Level Error
-    exit 1
+    catch {
+        Write-Error -ErrorAction Continue "Generate PR Reference failed: $($_.Exception.Message)"
+        Write-CIAnnotation -Message $_.Exception.Message -Level Error
+        exit 1
+    }
 }
 #endregion

@@ -4,12 +4,13 @@
   "[markdown]": {
     "editor.defaultFormatter": "davidanson.vscode-markdownlint"
   },
+  "search.followSymlinks": false,
   "markdown.mermaid.theme": "default",
   "chat.instructionsFilesLocations": {
     ".github/instructions/**/*.instructions.md": true,
     ".github/prompts/**/*.prompt.md": true
   },
-  "chat.modeFilesLocations": {
+  "chat.agentFilesLocations": {
     ".github/agents": true
   },
   "github.copilot.chat.commitMessageGeneration.instructions": [

@@ -1,6 +1,6 @@
 ---
 description: 'Provides prompt instructions for pull request (PR) generation - Brought to you by microsoft/edge-ai'
-maturity: stable
+agent: agent
 ---
 
 # Pull Request (PR) Generation Instructions
@@ -99,7 +99,7 @@ Use this section only when a template was found in Step 2.
 * Use the table below as guidance for where content typically fits.
 
 | pr.md Component       | Template Section           | Guidance                                          |
-| --------------------- | -------------------------- | ------------------------------------------------- |
+|-----------------------|----------------------------|---------------------------------------------------|
 | H1 Title              | Document title             | Replace the existing title with the generated one |
 | Summary paragraph     | ## Description             | Add after the placeholder comment if present      |
 | Change bullets        | ## Description             | Append after the summary                          |
@@ -120,25 +120,26 @@ Use this section only when a template was found in Step 2.
 
 Analyze changed files from the `<full_diff>` section of `pr-reference.xml` and extract file paths from diff headers like `diff --git a/path/to/file b/path/to/file`.
 
-| Change Type                | File Pattern             | Branch Pattern              | Commit Pattern              |
-|----------------------------|--------------------------|-----------------------------|-----------------------------|
+| Change Type                | File Pattern             | Branch Pattern            | Commit Pattern            |
+|----------------------------|--------------------------|---------------------------|---------------------------|
 | Bug fix                    | N/A                      | `^(fix\|bugfix\|hotfix)/` | `^fix(\(.+\))?:`          |
-| New feature                | N/A                      | `^(feat\|feature)/`        | `^feat(\(.+\))?:`         |
-| Breaking change            | N/A                      | N/A                         | `BREAKING CHANGE:\|^.+!:`  |
-| Documentation update       | `^docs/.*\.md$`          | `^docs/`                    | `^docs(\(.+\))?:`         |
-| GitHub Actions workflow    | `^\.github/workflows/.*` | N/A                         | `^ci(\(.+\))?:`           |
-| Linting configuration      | `\.markdownlint.*`       | N/A                         | `^lint(\(.+\))?:`         |
-| Security configuration     | `^scripts/security/.*`   | N/A                         | N/A                         |
-| DevContainer configuration | `^\.devcontainer/.*`     | N/A                         | N/A                         |
-| Dependency update          | `package.*\.json`        | `^deps/`                    | `^deps(\(.+\))?:`         |
-| Copilot instructions       | `.*\.instructions\.md$` | N/A                         | N/A                         |
-| Copilot prompt             | `.*\.prompt\.md$`       | N/A                         | N/A                         |
-| Copilot agent              | `.*\.agent\.md$`       | N/A                         | N/A                         |
-| Script or automation       | `.*\.(ps1\|sh\|py)$`    | N/A                         | N/A                         |
+| New feature                | N/A                      | `^(feat\|feature)/`       | `^feat(\(.+\))?:`         |
+| Breaking change            | N/A                      | N/A                       | `BREAKING CHANGE:\|^.+!:` |
+| Documentation update       | `^docs/.*\.md$`          | `^docs/`                  | `^docs(\(.+\))?:`         |
+| GitHub Actions workflow    | `^\.github/workflows/.*` | N/A                       | `^ci(\(.+\))?:`           |
+| Linting configuration      | `\.markdownlint.*`       | N/A                       | `^lint(\(.+\))?:`         |
+| Security configuration     | `^scripts/security/.*`   | N/A                       | N/A                       |
+| DevContainer configuration | `^\.devcontainer/.*`     | N/A                       | N/A                       |
+| Dependency update          | `package.*\.json`        | `^deps/`                  | `^deps(\(.+\))?:`         |
+| Copilot instructions       | `.*\.instructions\.md$`  | N/A                       | N/A                       |
+| Copilot prompt             | `.*\.prompt\.md$`        | N/A                       | N/A                       |
+| Copilot agent              | `.*\.agent\.md$`         | N/A                       | N/A                       |
+| Copilot skill              | `.*/SKILL\.md$`          | N/A                       | N/A                       |
+| Script or automation       | `.*\.(ps1\|sh\|py)$`     | N/A                       | N/A                       |
 
 Priority rules:
 
-* AI artifact patterns (`.instructions.md`, `.prompt.md`, `.agent.md`) take precedence over documentation updates.
+* AI artifact patterns (`.instructions.md`, `.prompt.md`, `.agent.md`, `SKILL.md`) take precedence over documentation updates.
 * Any breaking change in commits marks the PR as breaking.
 * Multiple change types can be selected.
 
@@ -146,36 +147,33 @@ Priority rules:
 
 Extract issue references from commit messages and branch names using the following patterns.
 
-| Pattern               | Source         | Output Format     |
-|-----------------------|----------------|-------------------|
-| `Fixes #(\d+)`        | Commit message | `Fixes #123`      |
-| `Closes #(\d+)`       | Commit message | `Closes #123`     |
-| `Resolves #(\d+)`     | Commit message | `Resolves #123`   |
-| `#(\d+)` (standalone) | Commit message | `Related to #123` |
-| `/(\d+)-`             | Branch name    | `Related to #123` |
-| `AB#(\d+)`            | Commit or branch | `AB#12345` (ADO) |
+| Pattern               | Source           | Output Format     |
+|-----------------------|------------------|-------------------|
+| `Fixes #(\d+)`        | Commit message   | `Fixes #123`      |
+| `Closes #(\d+)`       | Commit message   | `Closes #123`     |
+| `Resolves #(\d+)`     | Commit message   | `Resolves #123`   |
+| `#(\d+)` (standalone) | Commit message   | `Related to #123` |
+| `/(\d+)-`             | Branch name      | `Related to #123` |
+| `AB#(\d+)`            | Commit or branch | `AB#12345` (ADO)  |
 
 Deduplicate issue numbers and preserve the action prefix from the first occurrence.
 
 #### GHCP Maturity Detection
 
-After detecting GHCP files from Change Type Detection, analyze frontmatter for maturity levels:
+After detecting GHCP files from Change Type Detection, look up maturity levels from collection manifest item metadata:
 
-1. For each file matching `.instructions.md`, `.prompt.md`, or `.agent.md` patterns:
-   * Extract file content from `<full_diff>` section (look for `+++ b/...` paths)
-   * Parse YAML frontmatter between `---` delimiters in the added content
-   * Read `maturity` field value (default: `stable` if not present)
+1. For each file matching `.instructions.md`, `.prompt.md`, `.agent.md`, or `SKILL.md` patterns, find matching entries in `collections/*.collection.yml`, read each item's optional `maturity`, use `stable` when omitted, and when the same file appears in multiple collections use the highest-risk effective value in this order: `deprecated`, `experimental`, `preview`, `stable`.
 
-2. Categorize files by maturity:
+1. Categorize files by maturity:
 
-   | Maturity Level | Risk Level | Indicator | Action |
-   |----------------|------------|-----------|--------|
-   | stable | ✅ Low | Production-ready | Include in standard change list |
-   | preview | 🔶 Medium | Pre-release feature | Flag in dedicated section |
-   | experimental | ⚠️ High | May have breaking changes | Add warning banner |
-   | deprecated | 🚫 Critical | Scheduled for removal | Add deprecation notice |
+   | Maturity Level | Risk Level  | Indicator                 | Action                          |
+   |----------------|-------------|---------------------------|---------------------------------|
+   | stable         | ✅ Low       | Production-ready          | Include in standard change list |
+   | preview        | 🔶 Medium   | Pre-release feature       | Flag in dedicated section       |
+   | experimental   | ⚠️ High     | May have breaking changes | Add warning banner              |
+   | deprecated     | 🚫 Critical | Scheduled for removal     | Add deprecation notice          |
 
-3. If non-stable GHCP files detected, generate "GHCP Artifact Maturity" section in `pr.md`
+1. If non-stable GHCP files are detected, generate a "GHCP Artifact Maturity" section in `pr.md`.
 
 #### GHCP Maturity Output
 
@@ -206,11 +204,12 @@ Always include when any GHCP files are detected:
 ```markdown
 ## GHCP Artifact Maturity
 
-| File | Type | Maturity | Notes |
-|------|------|----------|-------|
-| `new-feature.prompt.md` | Prompt | ⚠️ experimental | Pre-release only |
-| `helper.agent.md` | Agent | 🔶 preview | Pre-release only |
-| `coding.instructions.md` | Instructions | ✅ stable | All builds |
+| File                     | Type         | Maturity        | Notes            |
+|--------------------------|--------------|-----------------|------------------|
+| `new-feature.prompt.md`  | Prompt       | ⚠️ experimental | Pre-release only |
+| `helper.agent.md`        | Agent        | 🔶 preview      | Pre-release only |
+| `video-to-gif/SKILL.md`  | Skill        | ✅ stable        | All builds       |
+| `coding.instructions.md` | Instructions | ✅ stable        | All builds       |
 ```
 
 ##### Maturity Checklist

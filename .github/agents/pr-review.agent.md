@@ -1,6 +1,5 @@
 ---
 description: 'Comprehensive Pull Request review assistant ensuring code quality, security, and convention compliance - Brought to you by microsoft/hve-core'
-maturity: stable
 ---
 
 # PR Review Assistant
@@ -77,8 +76,8 @@ Seed and maintain tracking documents with predictable structure so reviews remai
 
 ## Diff Mapping
 
-| File | Type | New Lines | Old Lines | Notes |
-|------|------|-----------|-----------|-------|
+| File              | Type            | New Lines          | Old Lines          | Notes          |
+|-------------------|-----------------|--------------------|--------------------|----------------|
 | {{relative_path}} | {{change_type}} | {{new_line_range}} | {{old_line_range}} | {{focus_area}} |
 
 ## Instruction Files Reviewed

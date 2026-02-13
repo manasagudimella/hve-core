@@ -9,19 +9,24 @@
     - Parameter validation
     - Module availability checks
     - ChangedFilesOnly filtering
-    - GitHub Actions integration
+    - CI integration
 #>
 
 BeforeAll {
     $script:ScriptPath = Join-Path $PSScriptRoot '../../linting/Invoke-PSScriptAnalyzer.ps1'
     $script:ModulePath = Join-Path $PSScriptRoot '../../linting/Modules/LintingHelpers.psm1'
+    $script:CIHelpersPath = Join-Path $PSScriptRoot '../../lib/Modules/CIHelpers.psm1'
 
-    # Import LintingHelpers for mocking
+    # Import modules for mocking
     Import-Module $script:ModulePath -Force
+    Import-Module $script:CIHelpersPath -Force
+
+    . $script:ScriptPath
 }
 
 AfterAll {
     Remove-Module LintingHelpers -Force -ErrorAction SilentlyContinue
+    Remove-Module CIHelpers -Force -ErrorAction SilentlyContinue
 }
 
 #region Parameter Validation Tests
@@ -33,18 +38,18 @@ Describe 'Invoke-PSScriptAnalyzer Parameter Validation' -Tag 'Unit' {
             Mock Invoke-ScriptAnalyzer { @() }
             Mock Get-ChangedFilesFromGit { @('script.ps1') }
             Mock Get-FilesRecursive { @() }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
         }
 
         It 'Accepts ChangedFilesOnly switch' {
-            { & $script:ScriptPath -ChangedFilesOnly } | Should -Not -Throw
+            { Invoke-PSScriptAnalyzerCore -ChangedFilesOnly } | Should -Not -Throw
         }
 
         It 'Accepts BaseBranch with ChangedFilesOnly' {
-            { & $script:ScriptPath -ChangedFilesOnly -BaseBranch 'develop' } | Should -Not -Throw
+            { Invoke-PSScriptAnalyzerCore -ChangedFilesOnly -BaseBranch 'develop' } | Should -Not -Throw
         }
     }
 
@@ -53,20 +58,20 @@ Describe 'Invoke-PSScriptAnalyzer Parameter Validation' -Tag 'Unit' {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Invoke-ScriptAnalyzer { @() }
             Mock Get-FilesRecursive { @() }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
         }
 
         It 'Uses default config path when not specified' {
             # Script defaults to scripts/linting/PSScriptAnalyzer.psd1
-            { & $script:ScriptPath } | Should -Not -Throw
+            { Invoke-PSScriptAnalyzerCore } | Should -Not -Throw
         }
 
         It 'Accepts custom config path' {
             $configPath = Join-Path $PSScriptRoot '../../linting/PSScriptAnalyzer.psd1'
-            { & $script:ScriptPath -ConfigPath $configPath } | Should -Not -Throw
+            { Invoke-PSScriptAnalyzerCore -ConfigPath $configPath } | Should -Not -Throw
         }
     }
 
@@ -75,15 +80,15 @@ Describe 'Invoke-PSScriptAnalyzer Parameter Validation' -Tag 'Unit' {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Invoke-ScriptAnalyzer { @() }
             Mock Get-FilesRecursive { @() }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
         }
 
         It 'Accepts custom output path' {
             $outputPath = Join-Path ([System.IO.Path]::GetTempPath()) 'test-output.json'
-            { & $script:ScriptPath -OutputPath $outputPath } | Should -Not -Throw
+            { Invoke-PSScriptAnalyzerCore -OutputPath $outputPath } | Should -Not -Throw
         }
     }
 }
@@ -102,7 +107,7 @@ Describe 'PSScriptAnalyzer Module Availability' -Tag 'Unit' {
         }
 
         It 'Reports error when module unavailable' {
-            { & $script:ScriptPath } | Should -Throw
+            { Invoke-PSScriptAnalyzerCore } | Should -Throw
         }
     }
 
@@ -111,14 +116,14 @@ Describe 'PSScriptAnalyzer Module Availability' -Tag 'Unit' {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Invoke-ScriptAnalyzer { @() }
             Mock Get-FilesRecursive { @() }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
         }
 
         It 'Proceeds when module available' {
-            { & $script:ScriptPath } | Should -Not -Throw
+            { Invoke-PSScriptAnalyzerCore } | Should -Not -Throw
         }
     }
 }
@@ -132,10 +137,10 @@ Describe 'File Discovery' -Tag 'Unit' {
         BeforeEach {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Invoke-ScriptAnalyzer { @() }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
         }
 
         It 'Uses Get-FilesRecursive for all files' {
@@ -143,7 +148,7 @@ Describe 'File Discovery' -Tag 'Unit' {
                 return @('script1.ps1', 'script2.ps1')
             }
 
-            & $script:ScriptPath
+            Invoke-PSScriptAnalyzerCore
             Should -Invoke Get-FilesRecursive -Times 1
         }
     }
@@ -153,10 +158,10 @@ Describe 'File Discovery' -Tag 'Unit' {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Invoke-ScriptAnalyzer { @() }
             Mock Get-FilesRecursive { @() }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
         }
 
         It 'Uses Get-ChangedFilesFromGit when ChangedFilesOnly specified' {
@@ -164,7 +169,7 @@ Describe 'File Discovery' -Tag 'Unit' {
                 return @('changed.ps1')
             }
 
-            & $script:ScriptPath -ChangedFilesOnly
+            Invoke-PSScriptAnalyzerCore -ChangedFilesOnly
             Should -Invoke Get-ChangedFilesFromGit -Times 1
         }
 
@@ -173,7 +178,7 @@ Describe 'File Discovery' -Tag 'Unit' {
                 return @('changed.ps1')
             }
 
-            & $script:ScriptPath -ChangedFilesOnly -BaseBranch 'develop'
+            Invoke-PSScriptAnalyzerCore -ChangedFilesOnly -BaseBranch 'develop'
             Should -Invoke Get-ChangedFilesFromGit -Times 1 -ParameterFilter {
                 $BaseBranch -eq 'develop'
             }
@@ -183,20 +188,20 @@ Describe 'File Discovery' -Tag 'Unit' {
 
 #endregion
 
-#region GitHub Actions Integration Tests
+#region CI Integration Tests
 
-Describe 'GitHub Actions Integration' -Tag 'Unit' {
-    Context 'Write-GitHubAnnotation calls' {
+Describe 'CI Integration' -Tag 'Unit' {
+    Context 'Write-CIAnnotation calls' {
         BeforeEach {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Get-FilesRecursive { @('test.ps1') }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
         }
 
-        It 'Calls Write-GitHubAnnotation for each issue' {
+        It 'Calls Write-CIAnnotation for each issue' {
             Mock Invoke-ScriptAnalyzer {
                 return @(
                     [PSCustomObject]@{
@@ -210,15 +215,15 @@ Describe 'GitHub Actions Integration' -Tag 'Unit' {
                 )
             }
 
-            & $script:ScriptPath
-            Should -Invoke Write-GitHubAnnotation -Times 1
+            try { Invoke-PSScriptAnalyzerCore } catch { $null = $_ }
+            Should -Invoke Write-CIAnnotation -Times 1
         }
 
-        It 'Sets GitHub output for file count' {
+        It 'Sets CI output for file count' {
             Mock Invoke-ScriptAnalyzer { @() }
 
-            & $script:ScriptPath
-            Should -Invoke Set-GitHubOutput -Times 1 -ParameterFilter {
+            Invoke-PSScriptAnalyzerCore
+            Should -Invoke Set-CIOutput -Times 1 -ParameterFilter {
                 $Name -eq 'count'
             }
         }
@@ -243,10 +248,10 @@ Describe 'Output Generation' -Tag 'Unit' {
         BeforeEach {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Get-FilesRecursive { @('test.ps1') }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
 
             Mock Invoke-ScriptAnalyzer {
                 return @(
@@ -265,12 +270,12 @@ Describe 'Output Generation' -Tag 'Unit' {
         }
 
         It 'Creates JSON output file' {
-            & $script:ScriptPath -OutputPath $script:OutputFile
+            try { Invoke-PSScriptAnalyzerCore -OutputPath $script:OutputFile } catch { $null = $_ }
             Test-Path $script:OutputFile | Should -BeTrue
         }
 
         It 'Output file contains valid JSON' {
-            & $script:ScriptPath -OutputPath $script:OutputFile
+            try { Invoke-PSScriptAnalyzerCore -OutputPath $script:OutputFile } catch { $null = $_ }
             { Get-Content $script:OutputFile | ConvertFrom-Json } | Should -Not -Throw
         }
     }
@@ -285,15 +290,15 @@ Describe 'Exit Code Handling' -Tag 'Unit' {
         BeforeEach {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Get-FilesRecursive { @() }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
             Mock Invoke-ScriptAnalyzer { @() }
         }
 
         It 'Returns success when no issues' {
-            { & $script:ScriptPath } | Should -Not -Throw
+            { Invoke-PSScriptAnalyzerCore } | Should -Not -Throw
         }
     }
 
@@ -301,10 +306,10 @@ Describe 'Exit Code Handling' -Tag 'Unit' {
         BeforeEach {
             Mock Get-Module { $true } -ParameterFilter { $Name -eq 'PSScriptAnalyzer' }
             Mock Get-FilesRecursive { @('test.ps1') }
-            Mock Set-GitHubOutput {}
-            Mock Set-GitHubEnv {}
-            Mock Write-GitHubStepSummary {}
-            Mock Write-GitHubAnnotation {}
+            Mock Set-CIOutput {}
+            Mock Set-CIEnv {}
+            Mock Write-CIStepSummary {}
+            Mock Write-CIAnnotation {}
 
             Mock Invoke-ScriptAnalyzer {
                 return @(
@@ -320,8 +325,8 @@ Describe 'Exit Code Handling' -Tag 'Unit' {
             }
         }
 
-        It 'Script completes with issues in output' {
-            { & $script:ScriptPath } | Should -Not -Throw
+        It 'Throws when issues found' {
+            { Invoke-PSScriptAnalyzerCore } | Should -Throw '*issue*'
         }
     }
 }

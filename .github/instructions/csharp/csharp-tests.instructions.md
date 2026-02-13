@@ -1,7 +1,6 @@
 ---
 applyTo: '**/*.cs'
 description: 'Required instructions for C# (CSharp) test code research, planning, implementation, editing, or creating - Brought to you by microsoft/hve-core'
-maturity: stable
 ---
 
 # C# Test Instructions
@@ -14,11 +13,11 @@ Use XUnit with NSubstitute for mocking. Focus on class behaviors rather than imp
 
 ### Mocking Libraries
 
-| Library | Usage |
-|---------|-------|
-| NSubstitute | Preferred for new projects |
-| FakeItEasy | Acceptable alternative |
-| Moq | Existing projects only (pin to 4.18.x or 4.20.2+) |
+| Library     | Usage                                             |
+|-------------|---------------------------------------------------|
+| NSubstitute | Preferred for new projects                        |
+| FakeItEasy  | Acceptable alternative                            |
+| Moq         | Existing projects only (pin to 4.18.x or 4.20.2+) |
 
 ## Test Naming
 

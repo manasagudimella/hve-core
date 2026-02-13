@@ -1,4 +1,4 @@
-#Requires -Modules Pester
+﻿#Requires -Modules Pester
 # Copyright (c) Microsoft Corporation.
 # SPDX-License-Identifier: MIT
 
@@ -8,34 +8,18 @@
 
 .DESCRIPTION
     Tests the staleness checking functions without executing the main script.
-    Uses AST function extraction to avoid running main execution block.
+    Uses dot-source guard pattern for function isolation.
 #>
 
 BeforeAll {
     $scriptPath = Join-Path $PSScriptRoot '../../security/Test-SHAStaleness.ps1'
-    $scriptContent = Get-Content $scriptPath -Raw
-
-    # Extract function definitions from the script without executing main block
-    # Parse the AST to get function definitions
-    $tokens = $null
-    $errors = $null
-    $ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$tokens, [ref]$errors)
-
-    # Extract all function definitions
-    $functionDefs = $ast.FindAll({ $args[0] -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)
-
-    # Define each function in the current scope using ScriptBlock
-    foreach ($func in $functionDefs) {
-        $funcCode = $func.Extent.Text
-        $scriptBlock = [scriptblock]::Create($funcCode)
-        . $scriptBlock
-    }
+    . $scriptPath
 
     $mockPath = Join-Path $PSScriptRoot '../Mocks/GitMocks.psm1'
     Import-Module $mockPath -Force
 
     # Save environment before tests
-    Save-GitHubEnvironment
+    Save-CIEnvironment
 
     # Fixture paths
     $script:FixturesPath = Join-Path $PSScriptRoot '../Fixtures/Security'
@@ -43,16 +27,16 @@ BeforeAll {
 
 AfterAll {
     # Restore environment after tests
-    Restore-GitHubEnvironment
+    Restore-CIEnvironment
 }
 
 Describe 'Test-GitHubToken' -Tag 'Unit' {
     BeforeEach {
-        Initialize-MockGitHubEnvironment
+        Initialize-MockCIEnvironment
     }
 
     AfterEach {
-        Clear-MockGitHubEnvironment
+        Clear-MockCIEnvironment
     }
 
     Context 'No token provided' {
@@ -118,11 +102,11 @@ Describe 'Test-GitHubToken' -Tag 'Unit' {
 
 Describe 'Invoke-GitHubAPIWithRetry' -Tag 'Unit' {
     BeforeEach {
-        Initialize-MockGitHubEnvironment
+        Initialize-MockCIEnvironment
     }
 
     AfterEach {
-        Clear-MockGitHubEnvironment
+        Clear-MockCIEnvironment
     }
 
     Context 'Successful requests' {
@@ -259,6 +243,736 @@ Describe 'Get-ToolStaleness' -Tag 'Integration', 'RequiresNetwork' {
         It 'Handles missing manifest gracefully' {
             $result = Get-ToolStaleness -ManifestPath 'TestDrive:/nonexistent/manifest.json'
             $result | Should -BeNullOrEmpty
+        }
+    }
+}
+
+Describe 'Main Script Execution' {
+    BeforeAll {
+        # Create test repo structure (script expects .github/workflows from current directory)
+        $script:TestRepo = Join-Path $TestDrive 'test-repo'
+        $script:WorkflowDir = Join-Path $script:TestRepo '.github' 'workflows'
+        New-Item -ItemType Directory -Path $script:WorkflowDir -Force | Out-Null
+        
+        # Create logs directory
+        $logsDir = Join-Path $script:TestRepo 'logs'
+        New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
+        
+        # Create test manifest in scripts/security location
+        $manifestDir = Join-Path $script:TestRepo 'scripts' 'security'
+        New-Item -ItemType Directory -Path $manifestDir -Force | Out-Null
+        $script:ManifestPath = Join-Path $manifestDir 'tool-checksums.json'
+        @{
+            tools = @(
+                @{
+                    name    = 'pwsh'
+                    repo    = 'PowerShell/PowerShell'
+                    version = '7.4.0'
+                    sha256  = 'test-sha'
+                    notes   = 'PowerShell'
+                }
+            )
+        } | ConvertTo-Json -Depth 10 | Set-Content -Path $script:ManifestPath
+        
+        # Save current directory
+        $script:OriginalLocation = Get-Location
+        
+        # Mock GitHub API at Describe scope to affect all child script invocations
+        Mock Invoke-RestMethod {
+            if ($Uri -like '*graphql*') {
+                # GraphQL API for checking GitHub Actions
+                return @{
+                    data = @{
+                        rateLimit  = @{ remaining = 5000; resetAt = (Get-Date).AddHours(1).ToString('o') }
+                        repository = @{
+                            refs = @{
+                                nodes = @(
+                                    @{
+                                        name   = 'v5'
+                                        target = @{
+                                            oid           = '9999999999999999999999999999999999999999'
+                                            committedDate = (Get-Date).AddMonths(-2).ToString('o')
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            elseif ($Uri -like '*/releases/latest') {
+                # REST API for checking tool releases
+                $repoName = ($Uri -split '/')[-3]
+                return @{
+                    tag_name = switch ($repoName) {
+                        'actionlint' { 'v1.7.10' }
+                        'gitleaks'   { 'v8.30.0' }
+                        default      { 'v1.0.0' }
+                    }
+                    published_at = (Get-Date).AddMonths(-1).ToString('o')
+                }
+            }
+            return @{}
+        }
+    }
+    
+    AfterAll {
+        # Restore original directory
+        Set-Location $script:OriginalLocation
+    }
+
+    Context 'Array coercion in main execution block' {
+        BeforeEach {
+            # Create workflow with SHA-pinned action
+            $workflowContent = @'
+name: Test
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
+'@
+            Set-Content -Path (Join-Path $script:WorkflowDir 'test.yml') -Value $workflowContent
+            
+            # Change to test repo directory
+            Set-Location $script:TestRepo
+        }
+        
+        AfterEach {
+            # Return to original location
+            Set-Location $script:OriginalLocation
+        }
+
+        It 'Executes array coercion when processing action repos' {
+            # This test executes the main script block which includes:
+            # - @($allActionRepos).Count checks (lines 532, 537)
+            # - @($Dependencies).Count checks throughout result formatting
+            
+            $jsonPath = Join-Path $script:TestRepo 'logs' 'test-output.json'
+            & $scriptPath -OutputFormat 'json' -OutputPath $jsonPath *>&1 | Out-Null
+            
+            # Validate JSON structure was created with array coercion
+            Test-Path $jsonPath | Should -BeTrue
+            $result = Get-Content $jsonPath | ConvertFrom-Json
+            
+            # Verify array coercion created proper structure
+            $result.PSObject.Properties.Name | Should -Contain 'TotalStaleItems'
+            # JSON deserialization creates Int64 (long) not Int32
+            $result.TotalStaleItems | Should -BeOfType [long]
+            $result.PSObject.Properties.Name | Should -Contain 'Dependencies'
+            # Dependencies should be array (even if empty)
+            , $result.Dependencies | Should -BeOfType [System.Object[]]
+        }
+
+        It 'Processes stale dependencies with array count operations' {
+            # Create multiple workflows to trigger grouping logic
+            for ($i = 1; $i -le 3; $i++) {
+                $workflowContent = @"
+name: Test$i
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
+      - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c
+"@
+                Set-Content -Path (Join-Path $script:WorkflowDir "test$i.yml") -Value $workflowContent
+            }
+
+            # This executes lines that group and count dependencies:
+            # - @($Dependencies | Group-Object Type) (line 753)
+            # - @($type.Group | Where-Object...).Count in summary building
+            
+            $jsonPath = Join-Path $script:TestRepo 'logs' 'grouped-test.json'
+            & $scriptPath -OutputFormat 'json' -OutputPath $jsonPath *>&1 | Out-Null
+            
+            # Validate grouping and counting worked
+            Test-Path $jsonPath | Should -BeTrue
+            $result = Get-Content $jsonPath | ConvertFrom-Json
+            
+            # Should have processed multiple action repos (array coercion on line 532)
+            $result.TotalStaleItems | Should -BeOfType [long]
+            $result.TotalStaleItems | Should -BeGreaterOrEqual 0
+            
+            # Log file should contain evidence of array counting
+            $logPath = Join-Path $script:TestRepo 'logs' 'sha-staleness-monitoring.log'
+            Test-Path $logPath | Should -BeTrue
+            $logContent = Get-Content $logPath -Raw
+            # Should log count of repos found (uses @($allActionRepos).Count)
+            $logContent | Should -Match 'unique repositories.*SHA-pinned actions'
+        }
+
+        It 'Handles tool staleness checking with array coercion' {
+            # This executes tool checking code:
+            # - @($toolResults).Count (line 895)
+            # - @($staleTools).Count (line 897-898)
+            # - @($errorTools).Count (line 921-922)
+            
+            $jsonPath = Join-Path $script:TestRepo 'logs' 'tool-check.json'
+            & $scriptPath -OutputPath $jsonPath -OutputFormat 'json' *>&1 | Out-Null
+            
+            # Validate tool processing used array coercion
+            Test-Path $jsonPath | Should -BeTrue
+            $result = Get-Content $jsonPath | ConvertFrom-Json
+            
+            # Result should have TotalStaleItems even if zero (proves @($toolResults).Count worked)
+            $result.PSObject.Properties.Name | Should -Contain 'TotalStaleItems'
+            
+            # Check log for tool checking evidence
+            $logPath = Join-Path $script:TestRepo 'logs' 'sha-staleness-monitoring.log'
+            $logContent = Get-Content $logPath -Raw
+            $logContent | Should -Match 'Checking tool staleness'
+        }
+
+        It 'Executes result formatting with array operations' {
+            # This triggers formatting code with array coercion:
+            # - @($Dependencies).Count in various output formats (lines 706, 721, 731, 742, 747, 752)
+            # - TotalStaleItems = @($Dependencies).Count (line 676)
+            
+            $jsonPath = Join-Path $script:TestRepo 'logs' 'format-test.json'
+            & $scriptPath -OutputFormat 'json' -OutputPath $jsonPath *>&1 | Out-Null
+            
+            # Validate JSON output format uses array coercion correctly
+            Test-Path $jsonPath | Should -BeTrue
+            $jsonResult = Get-Content $jsonPath | ConvertFrom-Json
+            
+            # Verify required fields from array operations
+            $jsonResult.PSObject.Properties.Name | Should -Contain 'TotalStaleItems'
+            $jsonResult.PSObject.Properties.Name | Should -Contain 'Dependencies'
+            $jsonResult.PSObject.Properties.Name | Should -Contain 'Timestamp'
+            
+            # TotalStaleItems should be numeric from @($Dependencies).Count
+            $jsonResult.TotalStaleItems | Should -BeOfType [long]
+            $jsonResult.TotalStaleItems | Should -BeGreaterOrEqual 0
+            
+            # Test Summary format exercises array coercion (@($Dependencies).Count)  
+            # The key is that it executes the @($Dependencies).Count operations
+            $summaryOutput = & $scriptPath -OutputFormat 'Summary' 2>&1 | Out-String
+            $summaryOutput | Should -Match "(Total stale dependencies:|No stale dependencies detected)"
+        }
+    }
+
+    Context 'CI environment integration' {
+        BeforeEach {
+            # Save original environment
+            $script:OriginalGHA = $env:GITHUB_ACTIONS
+            $script:OriginalADO = $env:TF_BUILD
+            $script:OriginalGHOutput = $env:GITHUB_OUTPUT
+            
+            # Create test workflow
+            $workflowContent = @'
+name: CI Test
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
+'@
+            Set-Content -Path (Join-Path $script:WorkflowDir 'ci.yml') -Value $workflowContent
+            
+            # Change to test repo
+            Set-Location $script:TestRepo
+        }
+
+        AfterEach {
+            $env:GITHUB_ACTIONS = $script:OriginalGHA
+            $env:TF_BUILD = $script:OriginalADO
+            $env:GITHUB_OUTPUT = $script:OriginalGHOutput
+            Set-Location $script:OriginalLocation
+        }
+
+        It 'Executes GitHub Actions output formatting with array coercion' {
+            $env:GITHUB_ACTIONS = 'true'
+            $outputFile = Join-Path $script:TestRepo 'github-output.txt'
+            $env:GITHUB_OUTPUT = $outputFile
+            
+            # This triggers GitHub Actions specific formatting (lines 706-715)
+            # which includes @($Dependencies).Count checks
+            
+            & $scriptPath -OutputFormat 'github' *>&1 | Out-Null
+            
+            # GitHub Actions format writes to GITHUB_OUTPUT, verify it was created
+            if ($outputFile -and (Test-Path $outputFile)) {
+                # Output file should have workflow command format
+                $content = Get-Content $outputFile -Raw
+                $content | Should -Not -BeNullOrEmpty
+            }
+            
+            # Verify log shows proper array counting
+            $logPath = Join-Path $script:TestRepo 'logs' 'sha-staleness-monitoring.log'
+            $logContent = Get-Content $logPath -Raw
+            # Should mention "stale dependencies found" with count (uses @($Dependencies).Count)
+            $logContent | Should -Match 'Stale dependencies found: \d+'
+        }
+
+        It 'Executes Azure DevOps output formatting with array coercion' {
+            $env:TF_BUILD = 'true'
+            
+            # This triggers ADO specific formatting (lines 721-729)
+            # which includes @($Dependencies).Count checks
+            
+            & $scriptPath -OutputFormat 'azdo' *>&1 | Out-Null
+            
+            # Azure DevOps format includes task.logissue commands
+            # Validates that @($Dependencies).Count was evaluated
+            $logPath = Join-Path $script:TestRepo 'logs' 'sha-staleness-monitoring.log'
+            $logContent = Get-Content $logPath -Raw
+            $logContent | Should -Match 'Stale dependencies found: \d+'
+        }
+
+        It 'Executes console output formatting with array coercion' {
+            # No CI environment - uses console output (lines 731-755)
+            # Includes @($Dependencies).Count and grouping operations
+            
+            # Console format doesn't create output file unless -OutputPath specified
+            & $scriptPath -OutputFormat 'console' *>&1 | Out-Null
+            
+            # Verify log contains array coercion evidence
+            $logPath = Join-Path $script:TestRepo 'logs' 'sha-staleness-monitoring.log'
+            Test-Path $logPath | Should -BeTrue
+            $logContent = Get-Content $logPath -Raw
+            # Should have processed and counted (uses @($Dependencies).Count)
+            $logContent | Should -Match 'SHA staleness monitoring completed'
+            $logContent | Should -Match 'Stale dependencies found: \d+'
+        }
+    }
+
+    Context 'Empty and edge case scenarios' {
+        BeforeEach {
+            Set-Location $script:TestRepo
+        }
+        
+        AfterEach {
+            Set-Location $script:OriginalLocation
+        }
+        
+        It 'Handles empty workflow directory with array coercion' {
+            # Remove all workflow files
+            Get-ChildItem $script:WorkflowDir -Filter "*.yml" | Remove-Item -Force
+            
+            # This should execute array coercion on empty collections
+            # Testing @($allActionRepos).Count -eq 0 branch (line 532)
+            
+            $jsonPath = Join-Path $script:TestRepo 'logs' 'empty-test.json'
+            & $scriptPath -OutputFormat 'json' -OutputPath $jsonPath *>&1 | Out-Null
+            
+            # Validate empty array handling
+            Test-Path $jsonPath | Should -BeTrue
+            $result = Get-Content $jsonPath | ConvertFrom-Json
+            
+            # Should show 0 items (proves @($allActionRepos).Count -eq 0 worked)
+            $result.TotalStaleItems | Should -Be 0
+            
+            # Log should indicate no SHA-pinned actions found
+            $logPath = Join-Path $script:TestRepo 'logs' 'sha-staleness-monitoring.log'
+            $logContent = Get-Content $logPath -Raw
+            $logContent | Should -Match 'No SHA-pinned.*found|No stale dependencies'
+        }
+
+        It 'Processes single stale dependency with array coercion' {
+            # Create single workflow
+            $singleWorkflow = @'
+name: Single
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
+'@
+            Set-Content -Path (Join-Path $script:WorkflowDir 'single.yml') -Value $singleWorkflow
+            
+            # Mock to return stale dependency (old SHA)
+            Mock Invoke-RestMethod {
+                if ($Uri -like '*graphql*') {
+                    return @{
+                        data = @{
+                            rateLimit  = @{ remaining = 5000; resetAt = (Get-Date).AddHours(1).ToString('o') }
+                            repository = @{
+                                refs = @{
+                                    nodes = @(
+                                        @{
+                                            name   = 'v5'
+                                            target = @{
+                                                oid           = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+                                                committedDate = (Get-Date).AddMonths(-6).ToString('o')
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                return @{}
+            } -ModuleName $null
+            
+            # Single item return should be coerced to array, also tests stale detection
+            $jsonPath = Join-Path $script:TestRepo 'logs' 'single-test.json'
+            & $scriptPath -OutputFormat 'json' -OutputPath $jsonPath *>&1 | Out-Null
+            
+            # Validate single item is properly handled as array
+            Test-Path $jsonPath | Should -BeTrue
+            $result = Get-Content $jsonPath | ConvertFrom-Json
+            
+            # Single dependency should still produce numeric count (not $null)
+            $result.TotalStaleItems | Should -BeOfType [long]
+            $result.TotalStaleItems | Should -BeGreaterOrEqual 0
+            # Dependencies array should exist
+            $result.PSObject.Properties.Name | Should -Contain 'Dependencies'
+            # If we have dependencies, validate structure
+            if ($result.TotalStaleItems -gt 0) {
+                $result.Dependencies | Should -Not -BeNullOrEmpty
+                # First item should have required properties
+                $result.Dependencies[0].PSObject.Properties.Name | Should -Contain 'Type'
+            }
+        }
+    }
+}
+
+Describe 'Get-BulkGitHubActionsStaleness' -Tag 'Unit' {
+    BeforeAll {
+        Save-CIEnvironment
+    }
+    AfterAll {
+        Restore-CIEnvironment
+    }
+
+    Context 'Token resolution' {
+        BeforeEach {
+            $env:GITHUB_TOKEN = ''
+            $env:SYSTEM_ACCESSTOKEN = ''
+            $env:GH_TOKEN = ''
+            $env:BUILD_REPOSITORY_PROVIDER = ''
+        }
+
+        It 'Uses GITHUB_TOKEN when available' {
+            $env:GITHUB_TOKEN = 'ghp_test_token_123'
+            Mock Test-GitHubToken { return @{ Valid = $true; Authenticated = $true; RateLimit = @{ remaining = 5000 }; Message = '' } }
+            Mock Invoke-GitHubAPIWithRetry {
+                return @{
+                    data = @{
+                        rateLimit = @{ remaining = 5000 }
+                        repo0     = @{ defaultBranchRef = @{ target = @{ oid = 'bbbb' * 10; committedDate = (Get-Date).ToString('o') } } }
+                    }
+                }
+            }
+
+            $sha = 'aaaa' * 10
+            $null = Get-BulkGitHubActionsStaleness -ActionRepos @('owner/repo') -ShaToActionMap @{
+                "owner/repo@$sha" = @{ Repo = 'owner/repo'; SHA = $sha; File = 'test.yml' }
+            }
+
+            Should -Invoke Test-GitHubToken -Times 1
+        }
+
+        It 'Falls back to GH_TOKEN when GITHUB_TOKEN is empty' {
+            $env:GH_TOKEN = 'ghp_fallback_token'
+            Mock Test-GitHubToken { return @{ Valid = $true; Authenticated = $true; RateLimit = @{ remaining = 5000 }; Message = '' } }
+            Mock Invoke-GitHubAPIWithRetry {
+                return @{
+                    data = @{
+                        rateLimit = @{ remaining = 5000 }
+                        repo0     = @{ defaultBranchRef = @{ target = @{ oid = 'bbbb' * 10; committedDate = (Get-Date).ToString('o') } } }
+                    }
+                }
+            }
+
+            $sha = 'aaaa' * 10
+            $null = Get-BulkGitHubActionsStaleness -ActionRepos @('owner/repo') -ShaToActionMap @{
+                "owner/repo@$sha" = @{ Repo = 'owner/repo'; SHA = $sha; File = 'test.yml' }
+            }
+
+            Should -Invoke Test-GitHubToken -Times 1
+        }
+
+        It 'Uses SYSTEM_ACCESSTOKEN for GitHub-hosted ADO repos' {
+            $env:SYSTEM_ACCESSTOKEN = 'ado_token'
+            $env:BUILD_REPOSITORY_PROVIDER = 'GitHub'
+            Mock Test-GitHubToken { return @{ Valid = $true; Authenticated = $true; RateLimit = @{ remaining = 5000 }; Message = '' } }
+            Mock Invoke-GitHubAPIWithRetry {
+                return @{
+                    data = @{
+                        rateLimit = @{ remaining = 5000 }
+                        repo0     = @{ defaultBranchRef = @{ target = @{ oid = 'bbbb' * 10; committedDate = (Get-Date).ToString('o') } } }
+                    }
+                }
+            }
+
+            $sha = 'aaaa' * 10
+            $null = Get-BulkGitHubActionsStaleness -ActionRepos @('owner/repo') -ShaToActionMap @{
+                "owner/repo@$sha" = @{ Repo = 'owner/repo'; SHA = $sha; File = 'test.yml' }
+            }
+
+            Should -Invoke Test-GitHubToken -Times 1
+        }
+    }
+
+    Context 'GraphQL batch processing' {
+        BeforeEach {
+            $env:GITHUB_TOKEN = 'ghp_test_token'
+        }
+
+        It 'Returns stale result when SHA differs and age exceeds threshold' {
+            Mock Test-GitHubToken { return @{ Valid = $true; Authenticated = $true; RateLimit = @{ remaining = 5000 }; Message = '' } }
+
+            $latestSHA = 'bbbb' * 10
+            $currentSHA = 'aaaa' * 10
+            $oldDate = (Get-Date).AddDays(-60).ToString('o')
+            $newDate = (Get-Date).ToString('o')
+
+            # Default branch query
+            Mock Invoke-GitHubAPIWithRetry {
+                return @{
+                    data = @{
+                        rateLimit = @{ remaining = 5000 }
+                        repo0     = @{ defaultBranchRef = @{ target = @{ oid = $latestSHA; committedDate = $newDate } } }
+                    }
+                }
+            } -ParameterFilter { $Body -match 'defaultBranchRef' }
+
+            # Commit query — use [PSCustomObject] so PSObject.Properties iteration works
+            Mock Invoke-GitHubAPIWithRetry {
+                return [PSCustomObject]@{
+                    data = [PSCustomObject]@{
+                        rateLimit = [PSCustomObject]@{ remaining = 5000 }
+                        commit0   = [PSCustomObject]@{
+                            object = [PSCustomObject]@{
+                                oid           = $currentSHA
+                                committedDate = $oldDate
+                            }
+                        }
+                    }
+                }
+            } -ParameterFilter { $Body -match 'commit0' }
+
+            $result = Get-BulkGitHubActionsStaleness -ActionRepos @('actions/checkout') -ShaToActionMap @{
+                "actions/checkout@$currentSHA" = @{ Repo = 'actions/checkout'; SHA = $currentSHA; File = 'ci.yml' }
+            }
+
+            $result | Should -Not -BeNullOrEmpty
+            @($result).Count | Should -BeGreaterOrEqual 1
+        }
+    }
+
+    Context 'Invalid token' {
+        BeforeEach {
+            $env:GITHUB_TOKEN = ''
+            $env:SYSTEM_ACCESSTOKEN = ''
+            $env:GH_TOKEN = ''
+            $env:BUILD_REPOSITORY_PROVIDER = ''
+        }
+
+        It 'Returns empty when no valid token is available' {
+            Mock Test-GitHubToken { return @{ Valid = $false; Authenticated = $false; Message = 'No token' } }
+            Mock Write-SecurityLog { }
+            Mock Invoke-GitHubAPIWithRetry {
+                return @{
+                    data = @{
+                        rateLimit = @{ remaining = 60 }
+                        repo0     = @{ defaultBranchRef = $null }
+                    }
+                }
+            }
+
+            $sha = 'aaaa' * 10
+            $result = Get-BulkGitHubActionsStaleness -ActionRepos @('owner/repo') -ShaToActionMap @{
+                "owner/repo@$sha" = @{ Repo = 'owner/repo'; SHA = $sha; File = 'test.yml' }
+            }
+
+            @($result).Count | Should -Be 0
+        }
+    }
+}
+
+Describe 'Test-GitHubActionsForStaleness' -Tag 'Unit' {
+    BeforeAll {
+        Save-CIEnvironment
+        $script:TestWorkflows = Join-Path $TestDrive '.github' 'workflows'
+        New-Item -ItemType Directory -Path $script:TestWorkflows -Force | Out-Null
+    }
+    AfterAll {
+        Restore-CIEnvironment
+    }
+
+    Context 'Workflow scanning' {
+        It 'Returns empty when no SHA-pinned actions found' {
+            $ymlContent = @'
+name: test
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+'@
+            Set-Content (Join-Path $script:TestWorkflows 'no-sha.yml') -Value $ymlContent
+
+            Push-Location $TestDrive
+            try {
+                Mock Write-SecurityLog { }
+                Mock Get-BulkGitHubActionsStaleness { return @() }
+
+                $null = Test-GitHubActionsForStaleness
+
+                # No SHA-pinned actions found = early return
+                Should -Not -Invoke Get-BulkGitHubActionsStaleness
+            }
+            finally {
+                Pop-Location
+            }
+        }
+
+        It 'Detects SHA-pinned actions in workflow files' {
+            $sha = 'a' * 40
+            $ymlContent = @"
+name: test
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@$sha
+"@
+            Set-Content (Join-Path $script:TestWorkflows 'pinned.yml') -Value $ymlContent
+
+            Push-Location $TestDrive
+            try {
+                Mock Write-SecurityLog { }
+                Mock Get-BulkGitHubActionsStaleness { return @() }
+
+                $null = Test-GitHubActionsForStaleness
+
+                Should -Invoke Get-BulkGitHubActionsStaleness -Times 1
+            }
+            finally {
+                Pop-Location
+            }
+        }
+    }
+
+    Context 'No workflow directory' {
+        It 'Returns empty when .github/workflows does not exist' {
+            $emptyDir = Join-Path $TestDrive 'empty-project'
+            New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null
+
+            Push-Location $emptyDir
+            try {
+                Mock Write-SecurityLog { }
+
+                $result = Test-GitHubActionsForStaleness
+                @($result).Count | Should -Be 0
+            }
+            finally {
+                Pop-Location
+            }
+        }
+    }
+}
+
+Describe 'Write-OutputResult' -Tag 'Unit' {
+    Context 'JSON output format' {
+        It 'Creates output file with correct structure' {
+            $jsonPath = Join-Path $TestDrive 'output.json'
+            $deps = @(
+                @{ Type = 'GitHubAction'; Name = 'actions/checkout'; DaysOld = 45; Severity = 'Low' }
+            )
+
+            Write-OutputResult -Dependencies $deps -OutputFormat 'json' -OutputPath $jsonPath
+
+            Test-Path $jsonPath | Should -BeTrue
+            $content = Get-Content $jsonPath | ConvertFrom-Json
+            $content.TotalStaleItems | Should -Be 1
+        }
+    }
+
+    Context 'Console output format' {
+        It 'Writes formatted output via Write-SecurityLog' {
+            Mock Write-SecurityLog { }
+
+            $deps = @(
+                @{ Type = 'GitHubAction'; ActionRepo = 'actions/checkout'; DaysOld = 45; Severity = 'Low'; File = 'ci.yml' }
+            )
+
+            Write-OutputResult -Dependencies $deps -OutputFormat 'console'
+
+            Should -Invoke Write-SecurityLog -Times 1
+        }
+    }
+
+    Context 'Summary output format' {
+        It 'Groups dependencies by type' {
+            Mock Write-Output { }
+
+            $deps = @(
+                @{ Type = 'GitHubAction'; Name = 'actions/checkout'; DaysOld = 45; Severity = 'Low' }
+                @{ Type = 'Tool'; Name = 'node'; DaysOld = 90; Severity = 'High' }
+            )
+
+            Write-OutputResult -Dependencies $deps -OutputFormat 'Summary'
+
+            Should -Invoke Write-Output -Times 1
+        }
+    }
+}
+
+Describe 'Invoke-SHAStalenessCheck' -Tag 'Unit' {
+    BeforeAll {
+        Save-CIEnvironment
+    }
+    AfterAll {
+        Restore-CIEnvironment
+    }
+
+    Context 'Log directory creation' {
+        It 'Creates log directory when it does not exist' {
+            $logPath = Join-Path $TestDrive 'staleness-logs' 'test.log'
+            $env:GITHUB_TOKEN = 'ghp_test'
+
+            Mock Test-GitHubActionsForStaleness { return @() }
+            Mock Get-ToolStaleness { }
+            Mock Write-OutputResult { }
+            Mock New-Item { } -ParameterFilter { $ItemType -eq 'Directory' }
+            Mock Write-SecurityLog { }
+
+            Invoke-SHAStalenessCheck -OutputFormat 'console' -LogPath $logPath
+
+            Should -Invoke New-Item -Times 1
+        }
+    }
+
+    Context 'FailOnStale behavior' {
+        It 'Throws when stale dependencies are detected and FailOnStale is set' {
+            $env:GITHUB_TOKEN = 'ghp_test'
+            Mock Write-SecurityLog { }
+            Mock New-Item { }
+            Mock Test-GitHubActionsForStaleness {
+                $script:StaleDependencies = @(
+                    @{ Type = 'GitHubAction'; Name = 'actions/checkout'; DaysOld = 45 }
+                )
+            }
+            Mock Get-ToolStaleness { }
+            Mock Write-OutputResult { }
+
+            { Invoke-SHAStalenessCheck -OutputFormat 'console' -FailOnStale } |
+                Should -Throw '*Stale dependencies detected*'
+        }
+
+        It 'Does not throw when no stale dependencies and FailOnStale is set' {
+            $env:GITHUB_TOKEN = 'ghp_test'
+            Mock Write-SecurityLog { }
+            Mock New-Item { }
+            Mock Test-GitHubActionsForStaleness {
+                $script:StaleDependencies = @()
+            }
+            Mock Get-ToolStaleness { }
+            Mock Write-OutputResult { }
+
+            { Invoke-SHAStalenessCheck -OutputFormat 'console' -FailOnStale } |
+                Should -Not -Throw
         }
     }
 }

@@ -4,43 +4,13 @@
 
 BeforeAll {
     $scriptPath = Join-Path $PSScriptRoot '../../security/Update-ActionSHAPinning.ps1'
-    $scriptContent = Get-Content $scriptPath -Raw
-
-    # Extract function definitions and script-level variables using AST to avoid executing main block
-    $tokens = $null
-    $errors = $null
-    $ast = [System.Management.Automation.Language.Parser]::ParseInput($scriptContent, [ref]$tokens, [ref]$errors)
-
-    # Extract and execute script-level variable assignments (e.g., $ActionSHAMap)
-    # These are direct children of the script block that are assignments
-    $scriptStatements = $ast.EndBlock.Statements
-    foreach ($stmt in $scriptStatements) {
-        if ($stmt -is [System.Management.Automation.Language.AssignmentStatementAst]) {
-            $varCode = $stmt.Extent.Text
-            try {
-                $scriptBlock = [scriptblock]::Create($varCode)
-                . $scriptBlock
-            } catch {
-                # Skip assignments that fail (may depend on other variables)
-                $null = $_
-            }
-        }
-    }
-
-    # Extract and define all function definitions
-    $functionDefs = $ast.FindAll({ $args[0] -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true)
-
-    foreach ($func in $functionDefs) {
-        $funcCode = $func.Extent.Text
-        $scriptBlock = [scriptblock]::Create($funcCode)
-        . $scriptBlock
-    }
+    . $scriptPath
 
     $mockPath = Join-Path $PSScriptRoot '../Mocks/GitMocks.psm1'
     Import-Module $mockPath -Force
 
     # Save environment before tests
-    Save-GitHubEnvironment
+    Save-CIEnvironment
 
     # Fixture paths
     $script:FixturesPath = Join-Path $PSScriptRoot '../Fixtures/Workflows'
@@ -76,7 +46,7 @@ BeforeAll {
 }
 
 AfterAll {
-    Restore-GitHubEnvironment
+    Restore-CIEnvironment
 }
 
 Describe 'Get-ActionReference' -Tag 'Unit' {
@@ -120,12 +90,12 @@ Describe 'Get-ActionReference' -Tag 'Unit' {
 
 Describe 'Get-SHAForAction' -Tag 'Unit' {
     BeforeEach {
-        Initialize-MockGitHubEnvironment
+        Initialize-MockCIEnvironment
         $env:GITHUB_TOKEN = 'ghp_test123456789'
     }
 
     AfterEach {
-        Clear-MockGitHubEnvironment
+        Clear-MockCIEnvironment
     }
 
     Context 'ActionSHAMap lookup' {
@@ -154,7 +124,7 @@ Describe 'Get-SHAForAction' -Tag 'Unit' {
 
 Describe 'Update-WorkflowFile' -Tag 'Unit' {
     BeforeEach {
-        Initialize-MockGitHubEnvironment
+        Initialize-MockCIEnvironment
         $env:GITHUB_TOKEN = 'ghp_test123456789'
 
         # Copy fixture to TestDrive for modification testing
@@ -172,13 +142,13 @@ Describe 'Update-WorkflowFile' -Tag 'Unit' {
     }
 
     AfterEach {
-        Clear-MockGitHubEnvironment
+        Clear-MockCIEnvironment
     }
 
     Context 'Return value structure' {
-        It 'Returns hashtable with FilePath' {
+        It 'Returns PSCustomObject with FilePath' {
             $result = Update-WorkflowFile -FilePath $script:TestWorkflow
-            $result | Should -BeOfType [hashtable]
+            $result | Should -BeOfType [PSCustomObject]
             $result.FilePath | Should -Be $script:TestWorkflow
         }
 
@@ -189,7 +159,7 @@ Describe 'Update-WorkflowFile' -Tag 'Unit' {
 
         It 'Returns ActionsPinned count' {
             $result = Update-WorkflowFile -FilePath $script:TestWorkflow
-            $result.ContainsKey('ActionsPinned') | Should -BeTrue
+            $result.PSObject.Properties.Name -contains 'ActionsPinned' | Should -BeTrue
         }
     }
 
@@ -220,7 +190,7 @@ Describe 'Update-WorkflowFile' -Tag 'Unit' {
 
 Describe 'Update-WorkflowFile -WhatIf' -Tag 'Unit' {
     BeforeEach {
-        Initialize-MockGitHubEnvironment
+        Initialize-MockCIEnvironment
         $env:GITHUB_TOKEN = 'ghp_test123456789'
 
         $unpinnedSource = Join-Path $script:FixturesPath 'unpinned-workflow.yml'
@@ -237,7 +207,7 @@ Describe 'Update-WorkflowFile -WhatIf' -Tag 'Unit' {
     }
 
     AfterEach {
-        Clear-MockGitHubEnvironment
+        Clear-MockCIEnvironment
     }
 
     Context 'WhatIf behavior' {
@@ -254,7 +224,7 @@ Describe 'Update-WorkflowFile -WhatIf' -Tag 'Unit' {
 
 Describe 'Invoke-GitHubAPIWithRetry' -Tag 'Unit' {
     BeforeEach {
-        Initialize-MockGitHubEnvironment
+        Initialize-MockCIEnvironment
         $env:GITHUB_TOKEN = 'ghp_test123456789'
         $script:AttemptCount = 0
 
@@ -263,7 +233,7 @@ Describe 'Invoke-GitHubAPIWithRetry' -Tag 'Unit' {
     }
 
     AfterEach {
-        Clear-MockGitHubEnvironment
+        Clear-MockCIEnvironment
     }
 
     Context 'Successful requests' {
@@ -486,12 +456,12 @@ Describe 'Write-OutputResult' -Tag 'Unit' {
 
 Describe 'Get-LatestCommitSHA' -Tag 'Unit' {
     BeforeEach {
-        Initialize-MockGitHubEnvironment
+        Initialize-MockCIEnvironment
         $env:GITHUB_TOKEN = 'ghp_test123456789'
     }
 
     AfterEach {
-        Clear-MockGitHubEnvironment
+        Clear-MockCIEnvironment
     }
 
     Context 'Successful SHA retrieval' {
@@ -561,11 +531,11 @@ Describe 'Get-LatestCommitSHA' -Tag 'Unit' {
 
 Describe 'Test-GitHubToken' -Tag 'Unit' {
     BeforeEach {
-        Initialize-MockGitHubEnvironment
+        Initialize-MockCIEnvironment
     }
 
     AfterEach {
-        Clear-MockGitHubEnvironment
+        Clear-MockCIEnvironment
     }
 
     Context 'Valid authenticated token' {
@@ -812,6 +782,226 @@ Describe 'Write-SecurityLog' -Tag 'Unit' {
             Write-SecurityLog -Message 'Default level message'
 
             Should -InvokeVerifiable
+        }
+    }
+}
+
+Describe 'Get-SHAForAction - Already Pinned' -Tag 'Unit' {
+    BeforeAll {
+        $script:OriginalGitHubToken = $env:GITHUB_TOKEN
+        $env:GITHUB_TOKEN = 'ghp_test123456789'
+    }
+
+    AfterAll {
+        $env:GITHUB_TOKEN = $script:OriginalGitHubToken
+    }
+
+    Context 'SHA-pinned action without UpdateStale' {
+        It 'Returns original ref when action is already SHA-pinned' {
+            $sha = 'a' * 40
+            $ref = "actions/checkout@$sha"
+            Mock Write-SecurityLog { }
+
+            $result = Get-SHAForAction -ActionRef $ref
+
+            $result | Should -Be $ref
+        }
+    }
+
+    Context 'SHA-pinned action with UpdateStale' {
+        It 'Returns original ref when UpdateStale is not specified' {
+            $currentSHA = 'a' * 40
+            $latestSHA = 'b' * 40
+            $ref = "actions/checkout@$currentSHA"
+
+            Mock Write-SecurityLog { }
+            Mock Get-LatestCommitSHA { return $latestSHA }
+
+            $result = Get-SHAForAction -ActionRef $ref
+
+            # Without UpdateStale flag in scope, returns original
+            $result | Should -Be $ref
+        }
+    }
+}
+
+Describe 'Update-WorkflowFile - Edge Cases' -Tag 'Unit' {
+    Context 'No actions in file' {
+        It 'Returns zero counts when file has no action references' {
+            $testFile = Join-Path $TestDrive 'empty-workflow.yml'
+            Set-Content $testFile -Value @'
+name: empty
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello
+'@
+            Mock Write-SecurityLog { }
+
+            $result = Update-WorkflowFile -FilePath $testFile
+
+            $result.ActionsProcessed | Should -Be 0
+            $result.ActionsPinned | Should -Be 0
+            $result.ActionsSkipped | Should -Be 0
+        }
+    }
+
+    Context 'File with local actions' {
+        It 'Skips local action references starting with ./' {
+            $testFile = Join-Path $TestDrive 'local-action.yml'
+            Set-Content $testFile -Value @'
+name: local
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ./local-action
+'@
+            Mock Write-SecurityLog { }
+
+            $result = Update-WorkflowFile -FilePath $testFile
+
+            $result.ActionsProcessed | Should -Be 0
+        }
+    }
+}
+
+Describe 'Invoke-ActionSHAPinningUpdate' -Tag 'Unit' {
+    BeforeAll {
+        $env:GITHUB_TOKEN = 'ghp_test123456789'
+        Initialize-MockCIEnvironment
+    }
+    AfterAll {
+        Clear-MockCIEnvironment
+    }
+
+    Context 'Missing workflow path' {
+        It 'Throws when workflow path does not exist' {
+            { Invoke-ActionSHAPinningUpdate -WorkflowPath '/nonexistent/path' } |
+                Should -Throw '*Workflow path not found*'
+        }
+    }
+
+    Context 'No YAML files in directory' {
+        It 'Warns and returns when no yml files found' {
+            $emptyDir = Join-Path $TestDrive 'empty-workflows'
+            New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null
+
+            Mock Write-SecurityLog { }
+
+            Invoke-ActionSHAPinningUpdate -WorkflowPath $emptyDir
+
+            Should -Invoke Write-SecurityLog -Times 1 -ParameterFilter { $Level -eq 'Warning' }
+        }
+    }
+
+    Context 'Full orchestration' {
+        It 'Processes workflow files and generates summary' {
+            $workDir = Join-Path $TestDrive 'orchestration-workflows'
+            New-Item -ItemType Directory -Path $workDir -Force | Out-Null
+
+            $sha = 'a' * 40
+            $content = @"
+name: test
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@$sha
+"@
+            Set-Content (Join-Path $workDir 'ci.yml') -Value $content
+
+            Mock Write-SecurityLog { }
+            Mock Write-OutputResult { }
+            Mock Get-SHAForAction { return "actions/checkout@$sha" }
+
+            Invoke-ActionSHAPinningUpdate -WorkflowPath $workDir -OutputFormat 'console'
+
+            Should -Invoke Write-OutputResult -Times 1
+        }
+    }
+
+    Context 'OutputReport flag' {
+        It 'Calls Export-SecurityReport when OutputReport is set' {
+            $workDir = Join-Path $TestDrive 'report-workflows'
+            New-Item -ItemType Directory -Path $workDir -Force | Out-Null
+
+            Set-Content (Join-Path $workDir 'test.yml') -Value @'
+name: test
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
+'@
+            Mock Write-SecurityLog { }
+            Mock Write-OutputResult { }
+            Mock Export-SecurityReport { return (Join-Path $TestDrive 'report.json') }
+
+            Invoke-ActionSHAPinningUpdate -WorkflowPath $workDir -OutputReport -OutputFormat 'console'
+
+            Should -Invoke Export-SecurityReport -Times 1
+        }
+    }
+
+    Context 'Manual review actions' {
+        It 'Adds SecurityIssue for actions requiring manual review' {
+            $workDir = Join-Path $TestDrive 'manual-review-workflows'
+            New-Item -ItemType Directory -Path $workDir -Force | Out-Null
+
+            Set-Content (Join-Path $workDir 'unmapped.yml') -Value @'
+name: unmapped
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Unknown action
+        uses: some-unknown/action@v1
+'@
+            Mock Write-SecurityLog { }
+            Mock Write-OutputResult { }
+            Mock Get-SHAForAction { return $null }
+            Mock Add-SecurityIssue { }
+
+            Invoke-ActionSHAPinningUpdate -WorkflowPath $workDir -OutputFormat 'console'
+
+            Should -Invoke Add-SecurityIssue -Times 1
+        }
+    }
+
+    Context 'WhatIf support' {
+        It 'Does not modify files when WhatIf is used' {
+            $workDir = Join-Path $TestDrive 'whatif-workflows'
+            New-Item -ItemType Directory -Path $workDir -Force | Out-Null
+
+            $sha = 'a' * 40
+            $content = @"
+name: whatif
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@$sha
+"@
+            $filePath = Join-Path $workDir 'whatif.yml'
+            Set-Content $filePath -Value $content
+
+            Mock Write-SecurityLog { }
+            Mock Write-OutputResult { }
+            Mock Get-SHAForAction { return "actions/checkout@$sha" }
+
+            Invoke-ActionSHAPinningUpdate -WorkflowPath $workDir -OutputFormat 'console' -WhatIf
+
+            # File content should remain unchanged
+            $afterContent = Get-Content $filePath -Raw
+            $afterContent | Should -Match "actions/checkout@$sha"
         }
     }
 }

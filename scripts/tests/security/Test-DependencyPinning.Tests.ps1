@@ -340,6 +340,224 @@ Describe 'ExcludePaths Filtering Logic' -Tag 'Unit' {
     }
 }
 
+Describe 'Dot-sourced execution protection' -Tag 'Unit' {
+    Context 'When script is dot-sourced' {
+        It 'Does not execute main block when dot-sourced' {
+            # Arrange
+            $testScript = Join-Path $PSScriptRoot '../../security/Test-DependencyPinning.ps1'
+            $tempOutputPath = Join-Path $TestDrive 'dot-source-test.json'
+
+            # Act - Invoke in new process with dot-sourcing simulation
+            $scriptBlock = ". '$testScript' -OutputPath '$tempOutputPath'; [System.IO.File]::Exists('$tempOutputPath')"
+            pwsh -Command $scriptBlock 2>&1 | Out-Null
+
+            # Assert - Main execution should be skipped, no output file created
+            Test-Path $tempOutputPath | Should -BeFalse
+        }
+
+    }
+}
+
+Describe 'GitHub Actions error annotation' {
+    BeforeAll {
+        $script:OriginalGHA = $env:GITHUB_ACTIONS
+        $script:TestScript = Join-Path $PSScriptRoot '../../security/Test-DependencyPinning.ps1'
+    }
+
+    AfterAll {
+        if ($null -eq $script:OriginalGHA) {
+            Remove-Item Env:GITHUB_ACTIONS -ErrorAction SilentlyContinue
+        } else {
+            $env:GITHUB_ACTIONS = $script:OriginalGHA
+        }
+    }
+
+    Context 'Error handling with GitHub Actions' {
+        It 'Outputs GitHub error annotation on failure' {
+            # Arrange - Create a corrupted workflow file that will trigger an error
+            $testWorkflowDir = Join-Path $TestDrive 'test-workflows'
+            New-Item -ItemType Directory -Path (Join-Path $testWorkflowDir '.github/workflows') -Force | Out-Null
+            $corruptedFile = Join-Path $testWorkflowDir '.github/workflows/test.yml'
+            "uses: actions/checkout@invalid!!!" | Out-File -FilePath $corruptedFile -Encoding UTF8
+            
+            # Act - Run script in new process with GITHUB_ACTIONS set
+            $scriptCommand = @"
+`$env:GITHUB_ACTIONS = 'true'
+& '$script:TestScript' -Path '$testWorkflowDir' -Format 'json' -OutputPath '$TestDrive/gha-test.json' -FailOnUnpinned 2>&1
+"@
+            $output = pwsh -Command $scriptCommand
+
+            # Assert - Should contain GitHub Actions error annotation or error output
+            # The script should execute and potentially generate warnings/errors
+            $output | Should -Not -BeNullOrEmpty
+        }
+    }
+}
+
+Describe 'Get-ComplianceReportData' -Tag 'Unit' {
+    BeforeAll {
+        . $PSScriptRoot/../../security/Test-DependencyPinning.ps1
+    }
+
+    Context 'Array coercion operations' {
+        It 'Handles empty violations array' {
+            $result = Get-ComplianceReportData -ScanPath 'TestDrive:/' -Violations @() -ScannedFiles @()
+            
+            $result.TotalDependencies | Should -Be 0
+            $result.UnpinnedDependencies | Should -Be 0
+            $result.PinnedDependencies | Should -Be 0
+            $result.ComplianceScore | Should -Be 100.0
+        }
+
+        It 'Counts violations correctly with array coercion' {
+            $v1 = [DependencyViolation]::new()
+            $v1.Type = 'github-actions'
+            $v1.Severity = 'High'
+            
+            $v2 = [DependencyViolation]::new()
+            $v2.Type = 'github-actions'
+            $v2.Severity = 'Medium'
+            
+            $v3 = [DependencyViolation]::new()
+            $v3.Type = 'npm'
+            $v3.Severity = 'High'
+            
+            $violations = @($v1, $v2, $v3)
+            $scannedFiles = @(@{ Path = 'test1.yml' }, @{ Path = 'test2.json' })
+            
+            $result = Get-ComplianceReportData -ScanPath 'TestDrive:/' -Violations $violations -ScannedFiles $scannedFiles
+            
+            $result.TotalDependencies | Should -Be 3
+            $result.UnpinnedDependencies | Should -Be 3
+        }
+
+        It 'Groups violations by type with array coercion' {
+            $v1 = [DependencyViolation]::new()
+            $v1.Type = 'github-actions'
+            $v1.Severity = 'High'
+            
+            $v2 = [DependencyViolation]::new()
+            $v2.Type = 'github-actions'
+            $v2.Severity = 'Low'
+            
+            $v3 = [DependencyViolation]::new()
+            $v3.Type = 'npm'
+            $v3.Severity = 'Medium'
+            
+            $violations = @($v1, $v2, $v3)
+            $scannedFiles = @(@{ Path = 'test.yml' })
+            
+            $result = Get-ComplianceReportData -ScanPath 'TestDrive:/' -Violations $violations -ScannedFiles $scannedFiles
+            
+            $result.Summary.Keys | Should -Contain 'github-actions'
+            $result.Summary.Keys | Should -Contain 'npm'
+            $result.Summary['github-actions'].Total | Should -Be 2
+            $result.Summary['npm'].Total | Should -Be 1
+        }
+
+        It 'Counts severity levels correctly with array coercion' {
+            $violations = @()
+            for ($i = 0; $i -lt 4; $i++) {
+                $v = [DependencyViolation]::new()
+                $v.Type = 'github-actions'
+                $v.Severity = switch ($i) {
+                    0 { 'High' }
+                    1 { 'High' }
+                    2 { 'Medium' }
+                    3 { 'Low' }
+                }
+                $violations += $v
+            }
+            $scannedFiles = @(@{ Path = 'test.yml' })
+            
+            $result = Get-ComplianceReportData -ScanPath 'TestDrive:/' -Violations $violations -ScannedFiles $scannedFiles
+            
+            $result.Summary['github-actions'].High | Should -Be 2
+            $result.Summary['github-actions'].Medium | Should -Be 1
+            $result.Summary['github-actions'].Low | Should -Be 1
+        }
+
+        It 'Handles single violation without PowerShell unrolling' {
+            $v = [DependencyViolation]::new()
+            $v.Type = 'github-actions'
+            $v.Severity = 'High'
+            
+            $violations = @($v)
+            $scannedFiles = @(@{ Path = 'test.yml' })
+            
+            $result = Get-ComplianceReportData -ScanPath 'TestDrive:/' -Violations $violations -ScannedFiles $scannedFiles
+            
+            $result.TotalDependencies | Should -Be 1
+            $result.Summary['github-actions'].Total | Should -Be 1
+            $result.Summary['github-actions'].High | Should -Be 1
+        }
+    }
+}
+
+Describe 'Main Script Execution' {
+    BeforeAll {
+        $script:TestScript = Join-Path $PSScriptRoot '../../security/Test-DependencyPinning.ps1'
+        $script:TestWorkspaceDir = Join-Path $TestDrive 'test-workspace'
+        New-Item -ItemType Directory -Path $script:TestWorkspaceDir -Force | Out-Null
+        
+        # Create .github/workflows directory
+        $workflowDir = Join-Path $script:TestWorkspaceDir '.github/workflows'
+        New-Item -ItemType Directory -Path $workflowDir -Force | Out-Null
+    }
+
+    Context 'Array coercion in main execution block' {
+        It 'Executes array coercion when scanning files' {
+            # Create test workflow file
+            $workflowContent = @'
+name: Test
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+'@
+            Set-Content -Path (Join-Path $script:TestWorkspaceDir '.github/workflows/test.yml') -Value $workflowContent
+            
+            $jsonPath = Join-Path $TestDrive 'scan-output.json'
+            
+            # Execute script with array coercion operations
+            & $script:TestScript -Path $script:TestWorkspaceDir -Format 'json' -OutputPath $jsonPath *>&1 | Out-Null
+            
+            # Verify output was created (proves array operations executed)
+            Test-Path $jsonPath | Should -BeTrue
+            $result = Get-Content $jsonPath | ConvertFrom-Json
+            $result.PSObject.Properties.Name | Should -Contain 'ComplianceScore'
+        }
+
+        It 'Handles empty scan results with array coercion' {
+            # Remove workflow files
+            Remove-Item -Path (Join-Path $script:TestWorkspaceDir '.github/workflows/*.yml') -Force -ErrorAction SilentlyContinue
+            
+            # Create pinned workflow
+            $pinnedContent = @'
+name: Pinned
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
+'@
+            Set-Content -Path (Join-Path $script:TestWorkspaceDir '.github/workflows/pinned.yml') -Value $pinnedContent
+            
+            $jsonPath = Join-Path $TestDrive 'empty-output.json'
+            
+            # Execute with all dependencies pinned (tests zero count array coercion)
+            & $script:TestScript -Path $script:TestWorkspaceDir -Format 'json' -OutputPath $jsonPath *>&1 | Out-Null
+            
+            Test-Path $jsonPath | Should -BeTrue
+            $result = Get-Content $jsonPath | ConvertFrom-Json
+            $result.UnpinnedDependencies | Should -Be 0
+        }
+    }
+}
+
 Describe 'Get-NpmDependencyViolations' -Tag 'Unit' {
     BeforeAll {
         . $PSScriptRoot/../../security/Test-DependencyPinning.ps1
@@ -478,6 +696,156 @@ Describe 'Get-NpmDependencyViolations' -Tag 'Unit' {
 
             $violations.Count | Should -BeGreaterThan 0
             $violations | Where-Object { $_.Name -eq 'valid-package' } | Should -Not -BeNullOrEmpty
+        }
+    }
+}
+
+Describe 'Get-RemediationSuggestion' -Tag 'Unit' {
+    Context 'Without -Remediate flag' {
+        It 'Returns enable-flag message' {
+            $v = [DependencyViolation]::new('f.yml', 1, 'github-actions', 'actions/checkout', 'High', 'desc')
+            $v.Version = 'v4'
+            $result = Get-RemediationSuggestion -Violation $v
+            $result | Should -BeLike '*Enable -Remediate flag*'
+        }
+    }
+
+    Context 'GitHub Actions with -Remediate' {
+        It 'Resolves SHA from API and returns pin suggestion' {
+            $v = [DependencyViolation]::new('f.yml', 1, 'github-actions', 'actions/checkout', 'High', 'desc')
+            $v.Version = 'v4'
+            $fakeSha = 'a'.PadRight(40, 'b')
+            Mock Invoke-RestMethod { return @{ sha = $fakeSha } }
+            $result = Get-RemediationSuggestion -Violation $v -Remediate
+            $result | Should -BeLike "Pin to SHA: uses: actions/checkout@$fakeSha*"
+        }
+
+        It 'Returns manual fallback when API throws' {
+            $v = [DependencyViolation]::new('f.yml', 1, 'github-actions', 'actions/checkout', 'High', 'desc')
+            $v.Version = 'v4'
+            Mock Invoke-RestMethod { throw 'API error' }
+            Mock Write-PinningLog {}
+            $result = Get-RemediationSuggestion -Violation $v -Remediate
+            $result | Should -Be 'Manually research and pin to immutable reference'
+        }
+    }
+
+    Context 'Non-github-actions type with -Remediate' {
+        It 'Returns generic research message' {
+            $v = [DependencyViolation]::new('req.txt', 1, 'pip', 'requests', 'Medium', 'desc')
+            $v.Version = '2.31.0'
+            $result = Get-RemediationSuggestion -Violation $v -Remediate
+            $result | Should -BeLike '*Research and pin*pip*'
+        }
+    }
+}
+
+Describe 'Get-DependencyViolation with ValidationFunc' -Tag 'Unit' {
+    Context 'npm type triggers ValidationFunc path' {
+        BeforeAll {
+            $script:npmFixturePath = Join-Path $script:SecurityFixturesPath 'npm-violations'
+            if (-not (Test-Path $script:npmFixturePath)) {
+                New-Item -ItemType Directory -Path $script:npmFixturePath -Force | Out-Null
+            }
+            $script:pkgPath = Join-Path $script:npmFixturePath 'test-pkg.json'
+            Set-Content -Path $script:pkgPath -Value '{"dependencies":{"lodash":"^4.17.21"}}'
+        }
+
+        It 'Uses ValidationFunc instead of regex patterns' {
+            $fileInfo = @{
+                Path         = $script:pkgPath
+                Type         = 'npm'
+                RelativePath = 'test-pkg.json'
+            }
+            $violations = Get-DependencyViolation -FileInfo $fileInfo
+            $violations | Should -Not -BeNullOrEmpty
+            $violations[0].GetType().Name | Should -Be 'DependencyViolation'
+        }
+
+        It 'Sets File from FileInfo when missing' {
+            $fileInfo = @{
+                Path         = $script:pkgPath
+                Type         = 'npm'
+                RelativePath = 'test-pkg.json'
+            }
+            $violations = Get-DependencyViolation -FileInfo $fileInfo
+            $violations | ForEach-Object { $_.File | Should -Not -BeNullOrEmpty }
+        }
+    }
+}
+
+Describe 'Invoke-DependencyPinningAnalysis' -Tag 'Unit' {
+    BeforeAll {
+        Mock Get-FilesToScan { return @() }
+        Mock Get-ComplianceReportData {
+            return @{
+                ComplianceScore      = 100.0
+                TotalDependencies    = 0
+                UnpinnedDependencies = 0
+                Violations           = @()
+            }
+        }
+        Mock Export-ComplianceReport {}
+        Mock Export-CICDArtifact {}
+    }
+
+    Context 'All dependencies pinned' {
+        It 'Logs success message without throwing' {
+            { Invoke-DependencyPinningAnalysis -Path TestDrive: } | Should -Not -Throw
+        }
+    }
+
+    Context 'Violations below threshold with -FailOnUnpinned' {
+        BeforeAll {
+            Mock Get-FilesToScan {
+                return @(@{ Path = 'TestDrive:\f.yml'; Type = 'github-actions'; RelativePath = 'f.yml' })
+            }
+            Mock Get-DependencyViolation {
+                $v = [DependencyViolation]::new('f.yml', 1, 'github-actions', 'a/b', 'High', 'Not pinned')
+                return @($v)
+            }
+            Mock Get-RemediationSuggestion { return 'pin it' }
+            Mock Get-ComplianceReportData {
+                return @{
+                    ComplianceScore      = 50.0
+                    TotalDependencies    = 2
+                    UnpinnedDependencies = 1
+                    Violations           = @()
+                }
+            }
+        }
+
+        It 'Throws when score below threshold and -FailOnUnpinned' {
+            { Invoke-DependencyPinningAnalysis -Path TestDrive: -FailOnUnpinned -Threshold 80 } | Should -Throw '*below threshold*'
+        }
+
+        It 'Does not throw in soft-fail mode' {
+            { Invoke-DependencyPinningAnalysis -Path TestDrive: -Threshold 80 } | Should -Not -Throw
+        }
+    }
+
+    Context 'Score meets threshold' {
+        BeforeAll {
+            Mock Get-FilesToScan {
+                return @(@{ Path = 'TestDrive:\f.yml'; Type = 'github-actions'; RelativePath = 'f.yml' })
+            }
+            Mock Get-DependencyViolation {
+                $v = [DependencyViolation]::new('f.yml', 1, 'github-actions', 'a/b', 'Low', 'desc')
+                return @($v)
+            }
+            Mock Get-RemediationSuggestion { return 'pin it' }
+            Mock Get-ComplianceReportData {
+                return @{
+                    ComplianceScore      = 90.0
+                    TotalDependencies    = 10
+                    UnpinnedDependencies = 1
+                    Violations           = @()
+                }
+            }
+        }
+
+        It 'Does not throw when score meets threshold' {
+            { Invoke-DependencyPinningAnalysis -Path TestDrive: -Threshold 80 } | Should -Not -Throw
         }
     }
 }

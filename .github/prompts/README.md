@@ -60,6 +60,10 @@ Prompts can be invoked in GitHub Copilot Chat using `/prompt-name` syntax (e.g.,
 
 - **[GitHub Add Issue](./github-add-issue.prompt.md)** - Create GitHub issues with proper formatting and labels
 
+### Azure Operations
+
+- **[Incident Response](./incident-response.prompt.md)** - Incident response workflow for Azure operations with triage, diagnostics, mitigation, and RCA phases
+
 ### Documentation & Process
 
 - **[Pull Request](./pull-request.prompt.md)** - PR description and review assistance
@@ -69,7 +73,7 @@ Prompts can be invoked in GitHub Copilot Chat using `/prompt-name` syntax (e.g.,
 
 - **Prompts** (this directory): Coaching and educational guidance for learning
 - **[Instructions](../instructions/README.md)**: Systematic implementation and automation
-- **[Agents](../README.md)**: Specialized AI assistance with enhanced capabilities
+- **[Agents](../../docs/contributing/custom-agents.md)**: Specialized AI assistance with enhanced capabilities
 
 ## Quick Start
 
@@ -84,12 +88,13 @@ Prompts can be invoked in GitHub Copilot Chat using `/prompt-name` syntax (e.g.,
 9. **Checking build status?** Use [ADO Get Build Info](./ado-get-build-info.prompt.md)
 10. **Creating GitHub issues?** Use [GitHub Add Issue](./github-add-issue.prompt.md)
 11. **Working on PRs?** Use [Pull Request](./pull-request.prompt.md)
+12. **Responding to Azure incidents?** Use [Incident Response](./incident-response.prompt.md)
 
 ## Related Resources
 
 - **[Contributing Guide](../../CONTRIBUTING.md)** - Complete guide to contributing to the project
 - **[Instructions](../instructions/README.md)** - Comprehensive guidance files for development standards
-- **[Agents](../README.md)** - Specialized AI assistance with enhanced capabilities
+- **[Agents](../../docs/contributing/custom-agents.md)** - Specialized AI assistance with enhanced capabilities
 
 ---
 

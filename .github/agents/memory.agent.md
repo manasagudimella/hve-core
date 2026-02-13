@@ -1,6 +1,5 @@
 ---
 description: "Conversation memory persistence for session continuity - Brought to you by microsoft/hve-core"
-maturity: stable
 handoffs:
   - label: "🗑️ Clear"
     agent: rpi-agent
@@ -143,11 +142,11 @@ Start responses with an operation label: **Detected**, **Saved**, or **Restored*
 
 Provide a summary table on save or restore:
 
-| Field            | Description               |
-| ---------------- | ------------------------- |
-| **File**         | Path to memory file       |
-| **Topic**        | Session topic summary     |
-| **Pending**      | Count of pending tasks    |
+| Field              | Description                              |
+|--------------------|------------------------------------------|
+| **File**           | Path to memory file                      |
+| **Topic**          | Session topic summary                    |
+| **Pending**        | Count of pending tasks                   |
 | **Open Questions** | Count of unresolved items (restore only) |
 
 On save, include resume instructions: `/clear` then `/checkpoint continue {{description}}`.
