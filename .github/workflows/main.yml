@@ -96,28 +96,28 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # Bridge: release-please creates a published (immutable) release,
-      # ensuring version anchoring succeeds. Published releases cannot
-      # be edited or have assets uploaded (HTTP 422). Delete the
-      # immutable release and recreate as a mutable draft so downstream
-      # jobs can upload assets. The tag persists across the delete/create
-      # cycle. The publish-release job deletes the draft and recreates as published.
-      - name: Recreate release as draft for asset upload
+      # Workaround: release-please with "draft": true uses lazy tag
+      # creation — the git tag is not materialized until the release is
+      # published. Without the tag, release-please cannot find the draft
+      # on subsequent runs, breaking version anchoring. Create the tag
+      # explicitly via API. Replace with "force-tag-creation": true in
+      # release-please-config.json once release-please-action ships a
+      # version that includes googleapis/release-please#2627.
+      - name: Create git tag for draft release
         if: ${{ steps.release.outputs.release_created == 'true' }}
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           TAG="${{ steps.release.outputs.tag_name }}"
           REPO="${{ github.repository }}"
-          # Capture release metadata before deletion
-          RELEASE_JSON=$(gh release view "$TAG" --json name,body -R "$REPO")
-          NAME=$(echo "$RELEASE_JSON" | jq -r '.name')
-          echo "$RELEASE_JSON" | jq -r '.body' > /tmp/release-body.md
-          # Delete immutable published release; tag is preserved
-          gh release delete "$TAG" --yes -R "$REPO"
-          # Recreate as mutable draft for asset upload
-          gh release create "$TAG" --draft --verify-tag \
-            --title "$NAME" --notes-file /tmp/release-body.md -R "$REPO"
+          if ! gh api "/repos/$REPO/git/refs/tags/$TAG" --silent 2>/dev/null; then
+            gh api "/repos/$REPO/git/refs" \
+              -f "ref=refs/tags/$TAG" \
+              -f "sha=${{ github.sha }}"
+            echo "Created git tag $TAG -> ${{ github.sha }}"
+          else
+            echo "Git tag $TAG already exists"
+          fi
 
   extension-package-release:
     name: Package VS Code Extensions (Release)
@@ -216,11 +216,6 @@ jobs:
         run: |
           TAG="${{ needs.release-please.outputs.tag_name }}"
           REPO="${{ github.repository }}"
-          # Capture draft release metadata
-          RELEASE_JSON=$(gh release view "$TAG" --json name,body -R "$REPO")
-          NAME=$(echo "$RELEASE_JSON" | jq -r '.name')
-          echo "$RELEASE_JSON" | jq -r '.body' > /tmp/release-body.md
-          # Delete mutable draft; recreate as published
-          gh release delete "$TAG" --yes -R "$REPO"
-          gh release create "$TAG" --verify-tag \
-            --title "$NAME" --notes-file /tmp/release-body.md -R "$REPO"
+          # Promote draft to published. The release becomes immutable
+          # after publish with all assets already attached.
+          gh release edit "$TAG" --draft=false -R "$REPO"
