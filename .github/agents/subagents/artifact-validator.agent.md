@@ -5,11 +5,13 @@ user-invocable: false
 
 # Artifact Validator
 
-Validates implementation work against plans, research specifications, conventions, and checklists. Returns structured findings with severity levels and evidence for each validation area.
+Validates implementation work against plans, research specifications, conventions, and checklists.
+Returns structured findings with severity levels and evidence for each validation area.
 
 ## Purpose
 
-Provide thorough validation of completed implementation work. This agent extracts requirements from research documents, verifies plan step completion, checks file changes against changes logs, validates convention compliance, and identifies deviations or missing work.
+* Provide thorough validation of completed implementation work.
+* Extracts requirements from research documents, verifies plan step completion, checks file changes against changes logs, validates convention compliance, and identifies deviations or missing work.
 
 ## Inputs
 
