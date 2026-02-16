@@ -193,15 +193,6 @@ Instructions files typically include these sections based on codebase patterns:
 * Patterns to avoid, when relevant.
 * Validation guidance or tooling references.
 
-#### Sizing Guidance
-
-Instructions files in the codebase range from approximately 90 lines (focused, single-concern files like commit message conventions) to 300 lines (comprehensive guides like markdown standards). Target the size that covers the domain without padding:
-
-* Under 100 lines for narrow, single-concern topics.
-* 100 to 200 lines for standard coding conventions with examples.
-* 200 to 300 lines for comprehensive multi-section guides.
-* Over 300 lines may indicate the file should be split into focused parts.
-
 Validation guidelines:
 
 * Include `applyTo` frontmatter with valid glob patterns.
@@ -285,7 +276,7 @@ Structure skills for efficient context usage:
 2. Instructions (<5000 tokens recommended): The full *SKILL.md* body loads when the skill activates.
 3. Resources (as needed): Files in `scripts/`, `references/`, or `assets/` load only when required.
 
-Keep the main *SKILL.md* under 500 lines. Move detailed reference material to separate files.
+Keep the main *SKILL.md* focused. Move detailed reference material to separate files.
 
 ### File References
 
@@ -306,7 +297,7 @@ Validation guidelines:
 * Include `description` frontmatter (required).
 * Provide parallel script implementations for bash and PowerShell when targeting cross-platform use.
 * Document prerequisites for each supported platform.
-* Keep *SKILL.md* under 500 lines; move detailed reference material to `references/`.
+* Keep *SKILL.md* focused; move detailed reference material to `references/`.
 * Additional sections can be added between Parameters Reference and Troubleshooting as needed.
 
 #### Attribution Footer
