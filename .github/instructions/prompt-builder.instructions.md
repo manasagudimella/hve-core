@@ -5,11 +5,11 @@ applyTo: '**/*.prompt.md, **/*.agent.md, **/*.instructions.md, **/SKILL.md'
 
 # Prompt Builder Instructions
 
-These instructions define authoring standards for prompt engineering artifacts. Apply these standards when creating or modifying prompt, agent, instructions, or skill files.
+Apply these authoring standards when creating or modifying prompt, agent, instructions, or skill files.
 
 ## File Types
 
-This section defines file type selection criteria, authoring patterns, and validation checks.
+File type selection criteria, authoring patterns, and validation checks follow.
 
 ### Prompt Files
 
@@ -138,9 +138,9 @@ Skill directory structure:
     └── README.md               # Usage examples (recommended)
 ```
 
-### Optional Directories
+#### Optional Directories
 
-#### scripts/
+##### scripts/
 
 Contains executable code that agents run to perform tasks:
 
@@ -148,7 +148,7 @@ Contains executable code that agents run to perform tasks:
 * Include helpful error messages and handle edge cases gracefully.
 * Provide parallel implementations for bash and PowerShell when targeting cross-platform use.
 
-#### references/
+##### references/
 
 Contains additional documentation that agents read when needed:
 
@@ -156,7 +156,7 @@ Contains additional documentation that agents read when needed:
 * Domain-specific files such as `finance.md` or `legal.md`.
 * Keep individual reference files focused; agents load these on demand.
 
-#### assets/
+##### assets/
 
 Contains static resources:
 
@@ -168,26 +168,26 @@ Contains static resources:
 
 Skill files include these sections in order:
 
-1. **Title (H1)**: Clear heading matching skill purpose.
-2. **Overview**: Brief explanation of what the skill does.
-3. **Prerequisites**: Platform-specific installation requirements.
-4. **Quick Start**: Basic usage with default settings.
-5. **Parameters Reference**: Table documenting all options with defaults.
-6. **Script Reference**: Usage examples for bash and PowerShell.
-7. **Troubleshooting**: Common issues and solutions.
-8. **Attribution Footer**: Standard footer with attribution.
+1. Title (H1) with a clear heading matching skill purpose.
+2. Overview with a brief explanation of what the skill does.
+3. Prerequisites with platform-specific installation requirements.
+4. Quick Start with basic usage and default settings.
+5. Parameters Reference table documenting all options with defaults.
+6. Script Reference with usage examples for bash and PowerShell.
+7. Troubleshooting with common issues and solutions.
+8. Attribution Footer with the standard footer and attribution.
 
-### Progressive Disclosure
+#### Progressive Disclosure
 
 Structure skills for efficient context usage:
 
-1. **Metadata** (~100 tokens): The `name` and `description` frontmatter fields load at startup for all skills.
-2. **Instructions** (<5000 tokens recommended): The full *SKILL.md* body loads when the skill activates.
-3. **Resources** (as needed): Files in `scripts/`, `references/`, or `assets/` load only when required.
+1. Metadata (~100 tokens): The `name` and `description` frontmatter fields load at startup for all skills.
+2. Instructions (<5000 tokens recommended): The full *SKILL.md* body loads when the skill activates.
+3. Resources (as needed): Files in `scripts/`, `references/`, or `assets/` load only when required.
 
 Keep the main *SKILL.md* under 500 lines. Move detailed reference material to separate files.
 
-### File References
+#### File References
 
 When referencing other files in the skill, use relative paths from the skill root:
 
@@ -200,7 +200,7 @@ scripts/extract.py
 
 Keep file references one level deep from *SKILL.md*. Avoid deeply nested reference chains.
 
-### Skill Invocation from Callers
+#### Skill Invocation from Callers
 
 When prompts, agents, or instructions need a skill's capability, describe the task intent rather than referencing script paths directly. Copilot matches the task description against each skill's `description` frontmatter and loads the skill on-demand via progressive disclosure.
 
@@ -235,7 +235,7 @@ Validation guidelines:
 
 ## Frontmatter Requirements
 
-This section defines frontmatter field requirements for prompt engineering artifacts.
+Frontmatter field requirements for prompt engineering artifacts follow.
 
 Maturity is tracked in `collections/*.collection.yml` item metadata, not in frontmatter. Do not include a `maturity` field in artifact frontmatter. Set maturity on the artifact's matching collection item entry; when omitted, maturity defaults to `stable`.
 
@@ -447,6 +447,14 @@ Execution patterns:
 * Prompt instructions can loop and call the subagent multiple times until the task completes.
 * Multiple subagents can run in parallel when work allows (for example, document researcher collects from documents while GitHub researcher collects from repositories).
 
+## External Source Integration
+
+When referencing SDKs or APIs for prompt instructions:
+
+* Prefer official repositories with recent activity.
+* Extract only the smallest snippet demonstrating the pattern for few-shot examples.
+* Get official documentation using tools and from the web for accurate prompt instructions and examples.
+
 ## Prompt Quality Criteria
 
 Every item applies to the entire file. Validation fails if any item is not satisfied.
@@ -460,11 +468,3 @@ Every item applies to the entire file. Validation fails if any item is not satis
 * [ ] External sources follow External Source Integration when referencing SDKs or APIs.
 * [ ] Few-shot examples are in correctly fenced code blocks and match the instructions exactly.
 * [ ] The user's request and requirements are implemented completely.
-
-## External Source Integration
-
-When referencing SDKs or APIs for prompt instructions:
-
-* Prefer official repositories with recent activity.
-* Extract only the smallest snippet demonstrating the pattern for few-shot examples.
-* Get official documentation using tools and from the web for accurate prompt instructions and examples.
