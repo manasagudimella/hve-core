@@ -546,49 +546,31 @@ description: 'Path check skill'
 Describe 'Get-ChangedSkillDirectories' -Tag 'Unit' {
     Context 'Changed files in skill directories' {
         It 'Returns skill name for changed file in skill directory' {
-            Mock git {
-                $global:LASTEXITCODE = 0
-                return 'abc123'
-            } -ParameterFilter { $args[0] -eq 'merge-base' }
-
-            Mock git {
-                $global:LASTEXITCODE = 0
+            Mock Get-ChangedFilesFromGit {
                 return @('.github/skills/video-to-gif/SKILL.md')
-            } -ParameterFilter { $args[0] -eq 'diff' -and ($args -contains '--name-only') }
+            }
 
             $result = Get-ChangedSkillDirectories -BaseBranch 'origin/main' -SkillsPath '.github/skills'
             $result | Should -Contain 'video-to-gif'
         }
 
         It 'Returns empty when changed files are outside skills directory' {
-            Mock git {
-                $global:LASTEXITCODE = 0
-                return 'abc123'
-            } -ParameterFilter { $args[0] -eq 'merge-base' }
-
-            Mock git {
-                $global:LASTEXITCODE = 0
+            Mock Get-ChangedFilesFromGit {
                 return @('scripts/linting/Test.ps1', 'docs/README.md')
-            } -ParameterFilter { $args[0] -eq 'diff' -and ($args -contains '--name-only') }
+            }
 
             $result = Get-ChangedSkillDirectories -BaseBranch 'origin/main' -SkillsPath '.github/skills'
-            $result | Should -HaveCount 0
+            @($result).Count | Should -Be 0
         }
 
         It 'Returns unique skill name for multiple changed files in same skill' {
-            Mock git {
-                $global:LASTEXITCODE = 0
-                return 'abc123'
-            } -ParameterFilter { $args[0] -eq 'merge-base' }
-
-            Mock git {
-                $global:LASTEXITCODE = 0
+            Mock Get-ChangedFilesFromGit {
                 return @(
                     '.github/skills/my-skill/SKILL.md',
                     '.github/skills/my-skill/scripts/run.sh',
                     '.github/skills/my-skill/references/doc.md'
                 )
-            } -ParameterFilter { $args[0] -eq 'diff' -and ($args -contains '--name-only') }
+            }
 
             $result = Get-ChangedSkillDirectories -BaseBranch 'origin/main' -SkillsPath '.github/skills'
             $result | Should -HaveCount 1
@@ -596,33 +578,19 @@ Describe 'Get-ChangedSkillDirectories' -Tag 'Unit' {
         }
 
         It 'Returns empty when no files are changed' {
-            Mock git {
-                $global:LASTEXITCODE = 0
-                return 'abc123'
-            } -ParameterFilter { $args[0] -eq 'merge-base' }
-
-            Mock git {
-                $global:LASTEXITCODE = 0
-                return @()
-            } -ParameterFilter { $args[0] -eq 'diff' -and ($args -contains '--name-only') }
+            Mock Get-ChangedFilesFromGit { return @() }
 
             $result = Get-ChangedSkillDirectories -BaseBranch 'origin/main' -SkillsPath '.github/skills'
-            $result | Should -HaveCount 0
+            @($result).Count | Should -Be 0
         }
 
         It 'Returns multiple skill names for changes across different skills' {
-            Mock git {
-                $global:LASTEXITCODE = 0
-                return 'abc123'
-            } -ParameterFilter { $args[0] -eq 'merge-base' }
-
-            Mock git {
-                $global:LASTEXITCODE = 0
+            Mock Get-ChangedFilesFromGit {
                 return @(
                     '.github/skills/skill-a/SKILL.md',
                     '.github/skills/skill-b/scripts/run.sh'
                 )
-            } -ParameterFilter { $args[0] -eq 'diff' -and ($args -contains '--name-only') }
+            }
 
             $result = Get-ChangedSkillDirectories -BaseBranch 'origin/main' -SkillsPath '.github/skills'
             $result | Should -HaveCount 2
@@ -631,67 +599,22 @@ Describe 'Get-ChangedSkillDirectories' -Tag 'Unit' {
         }
     }
 
-    Context 'Git command failures' {
-        It 'Returns empty with warning on merge-base failure' {
-            Mock git {
-                $global:LASTEXITCODE = 128
-                return $null
-            } -ParameterFilter { $args[0] -eq 'merge-base' }
+    Context 'Delegation to Get-ChangedFilesFromGit' {
+        It 'Passes BaseBranch to Get-ChangedFilesFromGit' {
+            Mock Get-ChangedFilesFromGit { return @() }
 
-            $result = Get-ChangedSkillDirectories -BaseBranch 'origin/main' -SkillsPath '.github/skills' 3>&1
-            # Filter out the actual return value from the warning stream
-            $warnings = $result | Where-Object { $_ -is [System.Management.Automation.WarningRecord] }
-            $values = @($result | Where-Object { $_ -isnot [System.Management.Automation.WarningRecord] })
-
-            $warnings | Should -Not -BeNullOrEmpty
-            $values | Should -HaveCount 0
-        }
-
-        It 'Returns empty with warning on diff failure' {
-            Mock git {
-                $global:LASTEXITCODE = 0
-                return 'abc123'
-            } -ParameterFilter { $args[0] -eq 'merge-base' }
-
-            Mock git {
-                $global:LASTEXITCODE = 1
-                return $null
-            } -ParameterFilter { $args[0] -eq 'diff' -and ($args -contains '--name-only') }
-
-            $result = Get-ChangedSkillDirectories -BaseBranch 'origin/main' -SkillsPath '.github/skills' 3>&1
-            $warnings = $result | Where-Object { $_ -is [System.Management.Automation.WarningRecord] }
-            $values = @($result | Where-Object { $_ -isnot [System.Management.Automation.WarningRecord] })
-
-            $warnings | Should -Not -BeNullOrEmpty
-            $values | Should -HaveCount 0
-        }
-
-        It 'Returns empty with warning when an exception is thrown' {
-            Mock git {
-                throw 'Simulated git failure'
-            } -ParameterFilter { $args[0] -eq 'merge-base' }
-
-            $result = Get-ChangedSkillDirectories -BaseBranch 'origin/main' -SkillsPath '.github/skills' 3>&1
-            $warnings = $result | Where-Object { $_ -is [System.Management.Automation.WarningRecord] }
-            $values = @($result | Where-Object { $_ -isnot [System.Management.Automation.WarningRecord] })
-
-            $warnings | Should -Not -BeNullOrEmpty
-            ($warnings | Select-Object -First 1).Message | Should -BeLike '*Error detecting changed skill directories*'
-            $values | Should -HaveCount 0
+            Get-ChangedSkillDirectories -BaseBranch 'develop' -SkillsPath '.github/skills'
+            Should -Invoke Get-ChangedFilesFromGit -Times 1 -ParameterFilter {
+                $BaseBranch -eq 'develop'
+            }
         }
     }
 
     Context 'Path normalization' {
         It 'Handles backslash paths in changed files' {
-            Mock git {
-                $global:LASTEXITCODE = 0
-                return 'abc123'
-            } -ParameterFilter { $args[0] -eq 'merge-base' }
-
-            Mock git {
-                $global:LASTEXITCODE = 0
+            Mock Get-ChangedFilesFromGit {
                 return @('.github\skills\backslash-skill\SKILL.md')
-            } -ParameterFilter { $args[0] -eq 'diff' -and ($args -contains '--name-only') }
+            }
 
             $result = Get-ChangedSkillDirectories -BaseBranch 'origin/main' -SkillsPath '.github/skills'
             $result | Should -Contain 'backslash-skill'
@@ -1098,7 +1021,7 @@ description: 'Clean skill with no warnings'
             } -ParameterFilter { $args[0] -eq 'rev-parse' }
 
             Mock Get-ChangedSkillDirectories {
-                return [string[]]@()
+                return @()
             }
 
             $exitCode = Invoke-SkillStructureValidation -SkillsPath 'skills' -ChangedFilesOnly

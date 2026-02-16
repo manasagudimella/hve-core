@@ -255,7 +255,8 @@ Validates the structural integrity of skill directories under `.github/skills/`.
 * Validates SKILL.md presence in each skill directory
 * Checks frontmatter for required `name` and `description` fields
 * Verifies `name` matches directory name
-* Warns on empty `scripts/` subdirectories or unrecognized directories
+* When `scripts/` subdirectory exists, requires both `.ps1` and `.sh` files for cross-platform support
+* Warns on unrecognized directories
 * Supports changed-files-only mode via Git
 * Creates CI annotations for violations
 * Exports JSON results to `logs/skill-validation-results.json`

@@ -25,6 +25,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath 'Modules/LintingHelpers.psm1') -Force
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath '../lib/Modules/CIHelpers.psm1') -Force
 
 # Recognized subdirectories within a skill directory
@@ -224,8 +225,9 @@ function Get-ChangedSkillDirectories {
     Returns skill directory names that contain changed files.
 
     .DESCRIPTION
-    Uses git diff with merge-base comparison to identify changed files under
-    the skills path, then extracts unique skill directory names.
+    Uses Get-ChangedFilesFromGit (LintingHelpers) to identify changed files
+    under the skills path with merge-base, HEAD~1, and staged/unstaged
+    fallbacks, then extracts unique skill directory names.
 
     .PARAMETER BaseBranch
     Git reference for the base branch comparison. Default: 'origin/main'.
@@ -234,7 +236,7 @@ function Get-ChangedSkillDirectories {
     Relative path to the skills directory. Default: '.github/skills'.
 
     .OUTPUTS
-    [string[]] Unique skill directory names with changes, or empty array on failure.
+    [string[]] Unique skill directory names with changes.
 
     .EXAMPLE
     $changed = Get-ChangedSkillDirectories -BaseBranch 'origin/main'
@@ -251,43 +253,27 @@ function Get-ChangedSkillDirectories {
         [string]$SkillsPath = '.github/skills'
     )
 
-    try {
-        $mergeBase = git merge-base HEAD $BaseBranch 2>$null
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Unable to determine merge base with '$BaseBranch'"
-            return @()
-        }
+    $changedFiles = @(Get-ChangedFilesFromGit -BaseBranch $BaseBranch -FileExtensions @('*'))
 
-        $changedFiles = git diff --name-only $mergeBase HEAD 2>$null
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Unable to get changed files from git diff"
-            return @()
-        }
-
-        # Normalize skills path for matching
-        $normalizedSkillsPath = $SkillsPath -replace '\\', '/'
-        if (-not $normalizedSkillsPath.EndsWith('/')) {
-            $normalizedSkillsPath += '/'
-        }
-
-        $skillNames = $changedFiles |
-            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
-            ForEach-Object { $_ -replace '\\', '/' } |
-            Where-Object { $_.StartsWith($normalizedSkillsPath) } |
-            ForEach-Object {
-                $remainder = $_.Substring($normalizedSkillsPath.Length)
-                $parts = $remainder -split '/'
-                if ($parts.Count -gt 0) { $parts[0] }
-            } |
-            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
-            Sort-Object -Unique
-
-        return [string[]]@($skillNames)
+    # Normalize skills path for matching
+    $normalizedSkillsPath = $SkillsPath -replace '\\', '/'
+    if (-not $normalizedSkillsPath.EndsWith('/')) {
+        $normalizedSkillsPath += '/'
     }
-    catch {
-        Write-Warning "Error detecting changed skill directories: $($_.Exception.Message)"
-        return @()
-    }
+
+    $skillNames = @($changedFiles |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        ForEach-Object { $_ -replace '\\', '/' } |
+        Where-Object { $_.StartsWith($normalizedSkillsPath) } |
+        ForEach-Object {
+            $remainder = $_.Substring($normalizedSkillsPath.Length)
+            $parts = $remainder -split '/'
+            if ($parts.Count -gt 0) { $parts[0] }
+        } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        Sort-Object -Unique)
+
+    return $skillNames
 }
 
 function Write-SkillValidationResults {
@@ -446,11 +432,13 @@ function Invoke-SkillStructureValidation {
             Write-Host "🔍 Detecting changed skill directories..." -ForegroundColor Cyan
             $changedSkills = Get-ChangedSkillDirectories -BaseBranch $BaseBranch -SkillsPath $SkillsPath
 
-            if ($changedSkills.Count -eq 0) {
+            if (@($changedSkills).Count -eq 0) {
                 Write-Host "✅ No changed skill directories found - validation complete" -ForegroundColor Green
                 return 0
             }
+        }
 
+        if ($ChangedFilesOnly) {
             Write-Host "Found $($changedSkills.Count) changed skill(s) to validate" -ForegroundColor Cyan
 
             $results = @()

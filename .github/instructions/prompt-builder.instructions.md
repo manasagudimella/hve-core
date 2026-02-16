@@ -118,9 +118,10 @@ Purpose: Self-contained packages that bundle documentation with executable scrip
 
 Characteristics:
 
-* Bundled with bash and PowerShell scripts in the same directory.
+* Optionally bundled with bash and PowerShell scripts in a `scripts/` subdirectory.
 * Provides step-by-step instructions for task execution.
 * Includes prerequisites, parameters, and troubleshooting sections.
+* Skills without scripts are valid documentation-driven knowledge packages.
 
 Skill directory structure:
 
@@ -172,8 +173,8 @@ Skill files include these sections in order:
 2. Overview with a brief explanation of what the skill does.
 3. Prerequisites with platform-specific installation requirements.
 4. Quick Start with basic usage and default settings.
-5. Parameters Reference table documenting all options with defaults.
-6. Script Reference with usage examples for bash and PowerShell.
+5. Parameters Reference table documenting all options with defaults (when scripts are included).
+6. Script Reference with usage examples for bash and PowerShell (when scripts are included).
 7. Troubleshooting with common issues and solutions.
 8. Attribution Footer with the standard footer and attribution.
 
@@ -228,7 +229,8 @@ Validation guidelines:
 
 * Include `name` frontmatter matching the skill directory name (required).
 * Include `description` frontmatter (required).
-* Provide parallel script implementations for bash and PowerShell when targeting cross-platform use.
+* When a `scripts/` directory is present, provide parallel script implementations for bash (`.sh`) and PowerShell (`.ps1`). Both are required for cross-platform support.
+* Skills without scripts are valid; omit Parameters Reference and Script Reference sections in that case.
 * Document prerequisites for each supported platform.
 * Keep *SKILL.md* under 500 lines; move detailed reference material to `references/`.
 * Additional sections can be added between Parameters Reference and Troubleshooting as needed.

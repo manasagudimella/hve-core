@@ -2,7 +2,7 @@
 title: Contributing Skills to HVE Core
 description: Requirements and standards for contributing skill packages to hve-core
 author: Microsoft
-ms.date: 2026-01-18
+ms.date: 2026-02-16
 ms.topic: how-to
 keywords:
   - skills
@@ -17,13 +17,13 @@ This guide defines the requirements, standards, and best practices for contribut
 
 ## What is a Skill?
 
-A **skill** is a self-contained package that provides guidance and utilities for specific tasks. Unlike agents or prompts that guide conversation flows, skills bundle documentation with executable scripts that perform concrete operations.
+A **skill** is a self-contained package that provides guidance and utilities for specific tasks. Unlike agents or prompts that guide conversation flows, skills bundle documentation, and optionally executable scripts, to perform concrete operations. A skill can be purely documentation-driven (providing structured knowledge and instructions) or can include cross-platform scripts for automated task execution.
 
 ## Skill vs Agent vs Prompt
 
 | Artifact | Purpose                       | Includes Scripts | User Interaction         |
 |----------|-------------------------------|------------------|--------------------------|
-| Skill    | Task execution with utilities | Yes              | Minimal after invocation |
+| Skill    | Task execution with utilities | Optional         | Minimal after invocation |
 | Agent    | Conversational guidance       | No               | Multi-turn conversation  |
 | Prompt   | Single-session workflow       | No               | One-shot execution       |
 
@@ -31,7 +31,8 @@ A **skill** is a self-contained package that provides guidance and utilities for
 
 Create a skill when you need to:
 
-* Bundle documentation with executable scripts
+* Package structured knowledge and instructions for a specific task domain
+* Bundle documentation with executable scripts for automated task execution
 * Provide cross-platform utilities (bash and PowerShell)
 * Standardize common development tasks
 * Share reusable tooling across projects
@@ -41,7 +42,7 @@ Create a skill when you need to:
 The following skill types will likely be **rejected**:
 
 * **Duplicate Skills**: Skills that replicate functionality of existing tools or skills
-* **Single-Platform Skills**: Skills that only work on one operating system
+* **Single-Platform Scripts**: Skills that include scripts for only one operating system (when scripts are present, both `.sh` and `.ps1` are required)
 * **Undocumented Utilities**: Scripts without comprehensive SKILL.md documentation
 
 ## File Structure Requirements
@@ -53,17 +54,25 @@ All skill files **MUST** be placed in:
 ```text
 .github/skills/<skill-name>/
 ├── SKILL.md                    # Main skill definition (required)
-├── convert.sh                  # Bash script (required for cross-platform)
-├── convert.ps1                 # PowerShell script (required for cross-platform)
+├── scripts/                    # Executable scripts (optional)
+│   ├── <action>.sh             # Bash script for macOS/Linux
+│   └── <action>.ps1            # PowerShell script for Windows
+├── references/                 # Additional documentation (optional)
+│   └── REFERENCE.md            # Detailed technical reference
+├── assets/                     # Static resources (optional)
+│   └── templates/              # Document or configuration templates
 └── examples/
     └── README.md               # Usage examples (recommended)
 ```
+
+The `scripts/` directory is **optional**. When present, it **MUST** contain at least one `.sh` file and at least one `.ps1` file for cross-platform support. Skills without scripts are valid and function as documentation-driven knowledge packages.
 
 ### Naming Convention
 
 * Use lowercase kebab-case for directory names: `video-to-gif`
 * Main definition file MUST be named `SKILL.md`
 * Script names should describe their action: `convert.sh`, `validate.ps1`
+* Only recognized subdirectories are allowed: `scripts`, `references`, `assets`, `examples`
 
 ## Frontmatter Requirements
 
@@ -227,9 +236,9 @@ Shows basic usage with default settings:
 \`\`\`
 ```
 
-#### 5. Parameters Reference
+#### 5. Parameters Reference (when scripts are included)
 
-Documents all configurable options with defaults:
+Documents all configurable options with defaults. Include this section when the skill contains scripts with configurable parameters.
 
 ```markdown
 ## Parameters
@@ -240,9 +249,9 @@ Documents all configurable options with defaults:
 | --width   | 480     | Output width |
 ```
 
-#### 6. Script Reference
+#### 6. Script Reference (when scripts are included)
 
-Documents both bash and PowerShell usage:
+Documents both bash and PowerShell usage. Include this section when the skill contains a `scripts/` directory.
 
 ```markdown
 ## Script Reference
@@ -281,6 +290,8 @@ Include at end of file:
 ```
 
 ## Script Requirements
+
+Scripts are **optional** for skills. A skill can function purely as a documentation-driven knowledge package without any scripts. When a skill includes a `scripts/` directory, both bash and PowerShell implementations are **required** for cross-platform support.
 
 ### Bash Scripts
 
@@ -354,8 +365,8 @@ Before submitting your skill, verify:
 
 * [ ] Directory at `.github/skills/<skill-name>/`
 * [ ] SKILL.md present with valid frontmatter
-* [ ] Bash script present for macOS/Linux
-* [ ] PowerShell script present for Windows
+* [ ] If `scripts/` directory exists: both `.sh` and `.ps1` files present
+* [ ] Only recognized subdirectories used (`scripts`, `references`, `assets`, `examples`)
 * [ ] Examples README (recommended)
 
 ### Frontmatter
@@ -367,8 +378,9 @@ Before submitting your skill, verify:
 * [ ] Optional: `disable-model-invocation` set appropriately (default `false` works for most skills)
 * [ ] Optional: `argument-hint` provides useful input guidance if set
 
-### Scripts
+### Scripts (when included)
 
+* [ ] `scripts/` directory contains at least one `.sh` and one `.ps1` file
 * [ ] Bash script follows bash.instructions.md
 * [ ] PowerShell script passes PSScriptAnalyzer
 * [ ] Both scripts implement equivalent functionality
@@ -388,9 +400,9 @@ Run these commands before submission:
 
 ```bash
 npm run lint:frontmatter      # Validate SKILL.md frontmatter
+npm run lint:ps               # Validate PowerShell scripts (when present)
+npm run lint:md               # Validate markdown formatting
 npm run validate:skills       # Validate skill directory structure
-npm run psscriptanalyzer      # Validate PowerShell scripts
-npm run lint:md                  # Validate markdown formatting
 ```
 
 All checks **MUST** pass before merge.
