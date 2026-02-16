@@ -5,7 +5,7 @@ agents:
   - prompt-tester
   - prompt-evaluator
   - codebase-researcher
-  - external-researcher
+  - researcher-subagent
 handoffs:
   - label: "💡 Update/Create"
     agent: prompt-builder
@@ -69,6 +69,7 @@ Determine the sandbox folder path using the Sandbox Environment naming conventio
 
 Run a `prompt-tester` agent as a subagent with `runSubagent` or `task` tools providing these inputs:
 
+* If using `runSubagent`, include in your prompt to read and follow all instructions from `.github/agents/subagents/prompt-tester.agent.md`
 * Target prompt file path(s) identified from the user request.
 * Run number for the current iteration.
 * Sandbox folder path.
@@ -83,6 +84,7 @@ The prompt-tester returns execution findings: sandbox folder path, execution log
 
 Run a `prompt-evaluator` agent as a subagent with `runSubagent` or `task` tools providing these inputs:
 
+* If using `runSubagent`, include in your prompt to read and follow all instructions from `.github/agents/subagents/prompt-evaluator.agent.md`
 * Target prompt file path(s).
 * Run number matching the prompt-tester run.
 * Sandbox folder path containing the *execution-log.md* from Step 1.
@@ -106,31 +108,33 @@ The prompt-evaluator returns evaluation findings: evaluation log path, evaluatio
 
 Research files reside in `.copilot-tracking/` at the workspace root unless the user specifies a different location.
 
-* `.copilot-tracking/research/` - Primary research documents (`{{YYYY-MM-DD}}-task-description-research.md`)
-* `.copilot-tracking/subagent/{{YYYY-MM-DD}}/` - Subagent research outputs (`topic-research.md`)
+* `.copilot-tracking/research/{{YYYY-MM-DD}}/{{topic}}-research.md` - Primary research documents.
+* `.copilot-tracking/research/{{YYYY-MM-DD}}/subagent/{{topic}}-research.md` - Subagent research documents.
 
-#### Step 1: Primary Research Document
+#### Step 1: Prepare Primary Research Document
 
-1. Create the primary research document if it does not already exist.
-2. Update the primary research document with requirements, topics, expectations, user provided details, current sandbox folder paths, current evaluation-log file paths, evaluation-log findings needing research.
+1. Create the primary research document if it does not already exist with placeholders.
+2. Update and add to the primary research document already known or discovered information including: requirements, topics, expectations, user provided details, current sandbox folder paths, current evaluation-log file paths, evaluation-log findings needing research.
 
-#### Step 2: Iterate Parallel Researcher Subagents
+#### Step 2: Iterate Running Parallel Researcher Subagents
 
-Iterate running `codebase-researcher` agent and/or `external-researcher` agent as subagents in parallel using `runSubagent` or `task` tools:
+Run parallel `researcher-subagent` agents as subagents in parallel using `runSubagent` or `task` tools providing these inputs:
 
-* Interpret and thoroughly iterate researching the user's requirements and topics.
-* Include any current *evaluation-log* files in determining research topics and requirements.
-* Use `external-researcher` based on topic, to research accurately related external sources, github repo, web pages, mcp tools.
-* Use `codebase-researcher` based on topic, to research this codebase for standards and conventions related to the user's requirements and topics.
-* Progressively read subagent research document and collect findings and discoveries into a primary research document.
-* Call new subagents using subagent tools when responding to clarifying questions including all details needed for external-researcher and/or codebase-researcher.
+* If using `runSubagent`, include in your prompt to read and follow all instructions from `.github/agents/subagents/researcher-subagent.agent.md`
+* Research topic(s) and/or question(s) to deeply and comprehensively research.
+* Subagent research document file path to create or update.
 
-#### Step 3: Repeat Research or Finalize Research Document
+The researcher-subagent returns deep research findings: subagent research document path, research status, important discovered details, recommend next research not yet completed, any clarifying questions.
+
+* Progressively read subagent research documents, collect findings and discoveries into the primary research document.
+* Repeat this step as needed running new researcher-subagents with answers to clarifying questions and/or next research topic(s) and/or questions.
+
+#### Step 3: Repeat Step 2 or Finalize Primary Research Document
 
 Finalize the primary research document:
 
-1. Repeat Phase 2 as needed to be thorough and accurate on research.
-2. Read the full primary research document then clean it up and finalize the document.
+1. Read the full primary research document then clean it up.
+2. Determine if primary research document is complete and accurate otherwise repeat Phase 2 as needed to be thorough and accurate on research.
 3. Move on to Phase 3 when the primary research document is complete and accurate.
 
 ### Phase 3: Prompt File(s) Modifications
@@ -142,13 +146,13 @@ Finalize the primary research document:
 
 #### Step 2: Iterate Parallel Prompt Updater Subagents
 
-Iterate running `prompt-updater` agent as subagents in parallel using `runSubagent` or `task` tools providing these inputs:
+Run parallel `prompt-updater` agents as subagents using `runSubagent` or `task` tools providing these inputs:
 
 * Prompt file(s) to create or modify.
 * User provided requirements and details along with the prompt file(s) specific purpose(s) and objectives.
 * Specific modifications to implement from current *evaluation-log* files if provided.
 * Related researched findings provided from the primary research document.
-* Prompt updater tracking file(s) `.copilot-tracking/prompts/{{YYYY-MM-DD}}/{{prompt-filename}}-{{updates}}.md` if known.
+* Prompt updater tracking file(s) `.copilot-tracking/prompts/{{YYYY-MM-DD}}/{{prompt-filename}}-updates.md` if known.
 * Current sandbox folder path if prompt testing completed.
 * Current *evaluation-log.md* file paths if prompt testing completed.
 
@@ -159,8 +163,11 @@ The prompt-updater returns modification details: prompt updater tracking file pa
 #### Step 3: Review Prompt Updater Tracking File(s)
 
 1. Read all prompt updater tracking file(s).
-2. Repeat Phase 3 until all modifications are completed, requirements and objectives are met.
-3. **Return to Phase 1 to execute and evaluate all modifications in a sandbox folder.**
+2. Repeat Phase 3 until all modifications are completed and requirements and objectives are met.
+
+#### Step 4: Return to Phase 1 to Execute and Evaluate All Modifications
+
+**Return to Phase 1 to execute and evaluate all modifications in a sandbox folder.**
 
 ## User Conversation Guidelines
 
