@@ -36,9 +36,9 @@ function Get-SkillFrontmatter {
     Parses YAML frontmatter from a SKILL.md file.
 
     .DESCRIPTION
-    Extracts key-value pairs between --- delimiters using regex. Handles
-    multiline description values in single-quoted strings. Does not depend
-    on the PowerShell-Yaml module.
+    Extracts single-line key-value pairs between --- delimiters using regex.
+    Does not support multiline YAML scalars. Does not depend on the
+    PowerShell-Yaml module.
 
     .PARAMETER Path
     Absolute path to the SKILL.md file.
@@ -180,13 +180,22 @@ function Test-SkillDirectory {
         }
     }
 
-    # Check scripts/ subdirectory contents
+    # Check scripts/ subdirectory contents (optional dir, but must contain both .ps1 and .sh if present)
     $scriptsDirPath = Join-Path -Path $Directory.FullName -ChildPath 'scripts'
     if (Test-Path $scriptsDirPath -PathType Container) {
         $scriptFiles = Get-ChildItem -Path $scriptsDirPath -File -ErrorAction SilentlyContinue |
             Where-Object { $_.Extension -in @('.ps1', '.sh') }
-        if ($null -eq $scriptFiles -or @($scriptFiles).Count -eq 0) {
-            $warnings.Add("'scripts/' subdirectory exists but contains no .ps1 or .sh files in '$relativePath'")
+        $hasPowerShell = @($scriptFiles | Where-Object { $_.Extension -eq '.ps1' }).Count -gt 0
+        $hasBash = @($scriptFiles | Where-Object { $_.Extension -eq '.sh' }).Count -gt 0
+
+        if (-not $hasPowerShell -and -not $hasBash) {
+            $errors.Add("'scripts/' subdirectory exists but contains no .ps1 or .sh files in '$relativePath'")
+        }
+        elseif (-not $hasPowerShell) {
+            $errors.Add("'scripts/' subdirectory is missing a required .ps1 file in '$relativePath'")
+        }
+        elseif (-not $hasBash) {
+            $errors.Add("'scripts/' subdirectory is missing a required .sh file in '$relativePath'")
         }
     }
 
@@ -379,8 +388,51 @@ function Write-SkillValidationResults {
     Write-Host "📊 Results written to: $outputPath" -ForegroundColor Cyan
 }
 
-#region Main Execution
-if ($MyInvocation.InvocationName -ne '.') {
+function Invoke-SkillStructureValidation {
+    <#
+    .SYNOPSIS
+    Orchestrates skill structure validation and returns an exit code.
+
+    .DESCRIPTION
+    Resolves the repository root, discovers skill directories (optionally
+    filtered to changed files), validates each one, writes results, and
+    returns an integer exit code. Extracted from the main execution block
+    for testability.
+
+    .PARAMETER SkillsPath
+    Relative path to the skills directory from the repo root.
+
+    .PARAMETER WarningsAsErrors
+    Treat warnings as errors for exit code calculation.
+
+    .PARAMETER ChangedFilesOnly
+    Validate only skill directories containing changed files.
+
+    .PARAMETER BaseBranch
+    Git reference for the base branch comparison when using ChangedFilesOnly.
+
+    .OUTPUTS
+    [int] Exit code: 0 for success, 1 for failure.
+
+    .EXAMPLE
+    $exitCode = Invoke-SkillStructureValidation -SkillsPath '.github/skills'
+    #>
+    [CmdletBinding()]
+    [OutputType([int])]
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$SkillsPath = '.github/skills',
+
+        [Parameter(Mandatory = $false)]
+        [switch]$WarningsAsErrors,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$ChangedFilesOnly,
+
+        [Parameter(Mandatory = $false)]
+        [string]$BaseBranch = 'origin/main'
+    )
+
     try {
         # Resolve repo root
         $repoRoot = git rev-parse --show-toplevel 2>$null
@@ -396,7 +448,7 @@ if ($MyInvocation.InvocationName -ne '.') {
 
             if ($changedSkills.Count -eq 0) {
                 Write-Host "✅ No changed skill directories found - validation complete" -ForegroundColor Green
-                exit 0
+                return 0
             }
 
             Write-Host "Found $($changedSkills.Count) changed skill(s) to validate" -ForegroundColor Cyan
@@ -415,19 +467,19 @@ if ($MyInvocation.InvocationName -ne '.') {
 
             if ($results.Count -eq 0) {
                 Write-Host "✅ No skill directories to validate after filtering - success" -ForegroundColor Green
-                exit 0
+                return 0
             }
         }
         else {
             if (-not (Test-Path $fullSkillsPath -PathType Container)) {
                 Write-Host "Skills directory not found at '$SkillsPath' - nothing to validate" -ForegroundColor Yellow
-                exit 0
+                return 0
             }
 
             $skillDirs = Get-ChildItem -Path $fullSkillsPath -Directory -ErrorAction SilentlyContinue
             if ($null -eq $skillDirs -or @($skillDirs).Count -eq 0) {
                 Write-Host "No skill directories found under '$SkillsPath' - nothing to validate" -ForegroundColor Yellow
-                exit 0
+                return 0
             }
 
             Write-Host "🔍 Validating $(@($skillDirs).Count) skill directory(ies)..." -ForegroundColor Cyan
@@ -445,20 +497,30 @@ if ($MyInvocation.InvocationName -ne '.') {
         $hasWarnings = @($results | Where-Object { $_.Warnings.Count -gt 0 }).Count -gt 0
 
         if ($hasErrors) {
-            exit 1
+            return 1
         }
         elseif ($WarningsAsErrors -and $hasWarnings) {
-            exit 1
+            return 1
         }
         else {
             Write-Host "✅ Skill structure validation complete" -ForegroundColor Green
-            exit 0
+            return 0
         }
     }
     catch {
         Write-Error -ErrorAction Continue "Validate-SkillStructure failed: $($_.Exception.Message)"
         Write-CIAnnotation -Message $_.Exception.Message -Level Error
-        exit 1
+        return 1
     }
+}
+
+#region Main Execution
+if ($MyInvocation.InvocationName -ne '.') {
+    $exitCode = Invoke-SkillStructureValidation `
+        -SkillsPath $SkillsPath `
+        -WarningsAsErrors:$WarningsAsErrors `
+        -ChangedFilesOnly:$ChangedFilesOnly `
+        -BaseBranch $BaseBranch
+    exit $exitCode
 }
 #endregion Main Execution

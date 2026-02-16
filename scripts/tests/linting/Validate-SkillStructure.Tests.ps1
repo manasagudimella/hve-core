@@ -65,6 +65,8 @@ AfterAll {
     if ($script:TempTestDir -and (Test-Path $script:TempTestDir)) {
         Remove-Item -Path $script:TempTestDir -Recurse -Force -ErrorAction SilentlyContinue
     }
+    Remove-Module CIHelpers -Force -ErrorAction SilentlyContinue
+    Remove-Module GitMocks -Force -ErrorAction SilentlyContinue
 }
 
 #region Get-SkillFrontmatter Tests
@@ -166,6 +168,7 @@ user-invokable: false
             $result['user-invokable'] | Should -BeOfType [string]
             $result['user-invokable'] | Should -BeExactly 'false'
         }
+
     }
 
     Context 'Invalid or missing frontmatter' {
@@ -276,8 +279,9 @@ description: 'Skill with optional dirs'
 # Dirs Skill
 "@
             $dir = New-TestSkillDirectory -SkillName 'dirs-skill' -FrontmatterContent $frontmatter -OptionalDirs @('scripts', 'references', 'assets', 'examples')
-            # Add a script file so scripts/ doesn't trigger the empty warning
+            # Add both script types so scripts/ passes validation
             Set-Content -Path (Join-Path $dir.FullName 'scripts/run.sh') -Value '#!/bin/bash'
+            Set-Content -Path (Join-Path $dir.FullName 'scripts/run.ps1') -Value 'Write-Host "hello"'
 
             $result = Test-SkillDirectory -Directory $dir -RepoRoot $script:SkillTestDir
             $result.IsValid | Should -BeTrue
@@ -388,7 +392,7 @@ description: 'Has empty name'
     }
 
     Context 'Scripts subdirectory checks' {
-        It 'Warns when scripts/ directory is empty (no .ps1 or .sh files)' {
+        It 'Reports error when scripts/ directory is empty (no .ps1 or .sh files)' {
             $frontmatter = @"
 ---
 name: empty-scripts
@@ -400,44 +404,82 @@ description: 'Skill with empty scripts dir'
             $dir = New-TestSkillDirectory -SkillName 'empty-scripts' -FrontmatterContent $frontmatter -WithEmptyScriptsDir
 
             $result = Test-SkillDirectory -Directory $dir -RepoRoot $script:SkillTestDir
-            $result.IsValid | Should -BeTrue
-            $result.Warnings | Should -HaveCount 1
-            $result.Warnings[0] | Should -BeLike '*scripts*no .ps1 or .sh*'
+            $result.IsValid | Should -BeFalse
+            $result.Errors | Should -HaveCount 1
+            $result.Errors[0] | Should -BeLike '*scripts*no .ps1 or .sh*'
         }
 
-        It 'No warning when scripts/ contains a .sh file' {
+        It 'Reports error when scripts/ contains only .sh file (missing .ps1)' {
             $frontmatter = @"
 ---
-name: sh-scripts
-description: 'Skill with sh script'
+name: sh-only-scripts
+description: 'Skill with sh script only'
 ---
 
-# SH Scripts
+# SH Only Scripts
 "@
-            $dir = New-TestSkillDirectory -SkillName 'sh-scripts' -FrontmatterContent $frontmatter -WithScriptsDir
+            $dir = New-TestSkillDirectory -SkillName 'sh-only-scripts' -FrontmatterContent $frontmatter -WithScriptsDir
 
             $result = Test-SkillDirectory -Directory $dir -RepoRoot $script:SkillTestDir
-            $result.IsValid | Should -BeTrue
-            $result.Warnings | Should -HaveCount 0
+            $result.IsValid | Should -BeFalse
+            $result.Errors | Should -HaveCount 1
+            $result.Errors[0] | Should -BeLike '*scripts*missing a required .ps1*'
         }
 
-        It 'No warning when scripts/ contains a .ps1 file' {
+        It 'Reports error when scripts/ contains only .ps1 file (missing .sh)' {
             $frontmatter = @"
 ---
-name: ps1-scripts
-description: 'Skill with ps1 script'
+name: ps1-only-scripts
+description: 'Skill with ps1 script only'
 ---
 
-# PS1 Scripts
+# PS1 Only Scripts
 "@
-            $dir = New-TestSkillDirectory -SkillName 'ps1-scripts' -FrontmatterContent $frontmatter
+            $dir = New-TestSkillDirectory -SkillName 'ps1-only-scripts' -FrontmatterContent $frontmatter
             $scriptsDir = Join-Path $dir.FullName 'scripts'
             New-Item -ItemType Directory -Path $scriptsDir -Force | Out-Null
             Set-Content -Path (Join-Path $scriptsDir 'run.ps1') -Value 'Write-Host "hello"'
 
             $result = Test-SkillDirectory -Directory $dir -RepoRoot $script:SkillTestDir
+            $result.IsValid | Should -BeFalse
+            $result.Errors | Should -HaveCount 1
+            $result.Errors[0] | Should -BeLike '*scripts*missing a required .sh*'
+        }
+
+        It 'Passes when scripts/ contains both .ps1 and .sh files' {
+            $frontmatter = @"
+---
+name: both-scripts
+description: 'Skill with both script types'
+---
+
+# Both Scripts
+"@
+            $dir = New-TestSkillDirectory -SkillName 'both-scripts' -FrontmatterContent $frontmatter
+            $scriptsDir = Join-Path $dir.FullName 'scripts'
+            New-Item -ItemType Directory -Path $scriptsDir -Force | Out-Null
+            Set-Content -Path (Join-Path $scriptsDir 'run.ps1') -Value 'Write-Host "hello"'
+            Set-Content -Path (Join-Path $scriptsDir 'run.sh') -Value '#!/bin/bash'
+
+            $result = Test-SkillDirectory -Directory $dir -RepoRoot $script:SkillTestDir
             $result.IsValid | Should -BeTrue
-            $result.Warnings | Should -HaveCount 0
+            $result.Errors | Should -HaveCount 0
+        }
+
+        It 'Passes when no scripts/ directory exists (scripts are optional)' {
+            $frontmatter = @"
+---
+name: no-scripts-dir
+description: 'Skill without scripts directory'
+---
+
+# No Scripts Dir
+"@
+            $dir = New-TestSkillDirectory -SkillName 'no-scripts-dir' -FrontmatterContent $frontmatter
+
+            $result = Test-SkillDirectory -Directory $dir -RepoRoot $script:SkillTestDir
+            $result.IsValid | Should -BeTrue
+            $result.Errors | Should -HaveCount 0
         }
     }
 
@@ -469,8 +511,9 @@ description: 'Skill with recognized dirs'
 # Recognized Dirs
 "@
             $dir = New-TestSkillDirectory -SkillName 'recognized-dirs' -FrontmatterContent $frontmatter -OptionalDirs @('scripts', 'references', 'assets', 'examples')
-            # Add a script file so scripts/ doesn't trigger the empty warning
+            # Add both script types so scripts/ passes validation
             Set-Content -Path (Join-Path $dir.FullName 'scripts/run.sh') -Value '#!/bin/bash'
+            Set-Content -Path (Join-Path $dir.FullName 'scripts/run.ps1') -Value 'Write-Host "hello"'
 
             $result = Test-SkillDirectory -Directory $dir -RepoRoot $script:SkillTestDir
             $result.IsValid | Should -BeTrue
@@ -869,6 +912,383 @@ Describe 'Write-SkillValidationResults console output' -Tag 'Unit' {
             )
 
             { Write-SkillValidationResults -Results $results -RepoRoot $repoRoot } | Should -Not -Throw
+        }
+    }
+}
+
+#endregion
+
+#region Invoke-SkillStructureValidation Tests
+
+Describe 'Invoke-SkillStructureValidation' -Tag 'Unit' {
+    BeforeAll {
+        $script:ValidationDir = Join-Path ([System.IO.Path]::GetTempPath()) "SkillValidation_$([guid]::NewGuid().ToString('N'))"
+        New-Item -ItemType Directory -Path $script:ValidationDir -Force | Out-Null
+
+        # Clear CI env to avoid annotation output interference
+        Clear-MockCIEnvironment
+    }
+
+    AfterAll {
+        if ($script:ValidationDir -and (Test-Path $script:ValidationDir)) {
+            Remove-Item -Path $script:ValidationDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    Context 'Skills directory does not exist' {
+        It 'Returns 0 when skills path does not exist' {
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:ValidationDir
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'nonexistent-skills'
+            $exitCode | Should -Be 0
+        }
+    }
+
+    Context 'Empty skills directory' {
+        It 'Returns 0 when skills directory has no subdirectories' {
+            $emptyDir = Join-Path $script:ValidationDir 'empty-skills'
+            New-Item -ItemType Directory -Path $emptyDir -Force | Out-Null
+
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:ValidationDir
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'empty-skills'
+            $exitCode | Should -Be 0
+        }
+    }
+
+    Context 'Valid skill directories' {
+        It 'Returns 0 for a valid skill with proper SKILL.md' {
+            $skillsDir = Join-Path $script:ValidationDir 'valid-skills'
+            $skillDir = Join-Path $skillsDir 'good-skill'
+            New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
+            $content = @"
+---
+name: good-skill
+description: 'A valid skill for integration testing'
+---
+
+# Good Skill
+"@
+            Set-Content -Path (Join-Path $skillDir 'SKILL.md') -Value $content
+
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:ValidationDir
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'valid-skills'
+            $exitCode | Should -Be 0
+        }
+    }
+
+    Context 'Invalid skill directories' {
+        It 'Returns 1 when a skill is missing SKILL.md' {
+            $skillsDir = Join-Path $script:ValidationDir 'invalid-missing'
+            $skillDir = Join-Path $skillsDir 'broken-skill'
+            New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
+
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:ValidationDir
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'invalid-missing'
+            $exitCode | Should -Be 1
+        }
+
+        It 'Returns 1 when SKILL.md has no frontmatter' {
+            $skillsDir = Join-Path $script:ValidationDir 'invalid-nofm'
+            $skillDir = Join-Path $skillsDir 'no-fm-skill'
+            New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
+            Set-Content -Path (Join-Path $skillDir 'SKILL.md') -Value '# Just a heading'
+
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:ValidationDir
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'invalid-nofm'
+            $exitCode | Should -Be 1
+        }
+
+        It 'Returns 1 when frontmatter name does not match directory' {
+            $skillsDir = Join-Path $script:ValidationDir 'invalid-mismatch'
+            $skillDir = Join-Path $skillsDir 'real-name'
+            New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
+            $content = @"
+---
+name: wrong-name
+description: 'Mismatched name'
+---
+
+# Wrong Name
+"@
+            Set-Content -Path (Join-Path $skillDir 'SKILL.md') -Value $content
+
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:ValidationDir
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'invalid-mismatch'
+            $exitCode | Should -Be 1
+        }
+    }
+
+    Context 'WarningsAsErrors flag' {
+        It 'Returns 1 when WarningsAsErrors and skill has warnings' {
+            $skillsDir = Join-Path $script:ValidationDir 'warn-as-error'
+            $skillDir = Join-Path $skillsDir 'warn-skill'
+            New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
+            $content = @"
+---
+name: warn-skill
+description: 'Skill with unrecognized dir'
+---
+
+# Warn Skill
+"@
+            Set-Content -Path (Join-Path $skillDir 'SKILL.md') -Value $content
+            New-Item -ItemType Directory -Path (Join-Path $skillDir 'custom-dir') -Force | Out-Null
+
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:ValidationDir
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'warn-as-error' -WarningsAsErrors
+            $exitCode | Should -Be 1
+        }
+
+        It 'Returns 0 when WarningsAsErrors but no warnings' {
+            $skillsDir = Join-Path $script:ValidationDir 'nowarn'
+            $skillDir = Join-Path $skillsDir 'clean-skill'
+            New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
+            $content = @"
+---
+name: clean-skill
+description: 'Clean skill with no warnings'
+---
+
+# Clean Skill
+"@
+            Set-Content -Path (Join-Path $skillDir 'SKILL.md') -Value $content
+
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:ValidationDir
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'nowarn' -WarningsAsErrors
+            $exitCode | Should -Be 0
+        }
+    }
+
+    Context 'ChangedFilesOnly mode' {
+        It 'Returns 0 when no skill files changed' {
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:ValidationDir
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            Mock Get-ChangedSkillDirectories {
+                return [string[]]@()
+            }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'skills' -ChangedFilesOnly
+            $exitCode | Should -Be 0
+        }
+
+        It 'Returns 0 for valid changed skill' {
+            $skillsDir = Join-Path $script:ValidationDir 'changed-valid'
+            $skillDir = Join-Path $skillsDir 'my-skill'
+            New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
+            $content = @"
+---
+name: my-skill
+description: 'Valid changed skill'
+---
+
+# My Skill
+"@
+            Set-Content -Path (Join-Path $skillDir 'SKILL.md') -Value $content
+
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:ValidationDir
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            Mock Get-ChangedSkillDirectories {
+                return [string[]]@('my-skill')
+            }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'changed-valid' -ChangedFilesOnly
+            $exitCode | Should -Be 0
+        }
+
+        It 'Returns 1 when changed skill has errors' {
+            $skillsDir = Join-Path $script:ValidationDir 'changed-invalid'
+            $skillDir = Join-Path $skillsDir 'bad-skill'
+            New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
+            $content = @"
+---
+name: bad-skill
+---
+
+# Bad Skill
+"@
+            Set-Content -Path (Join-Path $skillDir 'SKILL.md') -Value $content
+
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:ValidationDir
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            Mock Get-ChangedSkillDirectories {
+                return [string[]]@('bad-skill')
+            }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'changed-invalid' -ChangedFilesOnly
+            $exitCode | Should -Be 1
+        }
+
+        It 'Returns 0 and warns when changed skill was deleted' {
+            $skillsDir = Join-Path $script:ValidationDir 'changed-deleted'
+            New-Item -ItemType Directory -Path $skillsDir -Force | Out-Null
+
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:ValidationDir
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            Mock Get-ChangedSkillDirectories {
+                return [string[]]@('deleted-skill')
+            }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'changed-deleted' -ChangedFilesOnly 3>&1
+            # Filter warnings from return value
+            $warnings = @($exitCode | Where-Object { $_ -is [System.Management.Automation.WarningRecord] })
+            $values = @($exitCode | Where-Object { $_ -isnot [System.Management.Automation.WarningRecord] })
+
+            $values | Should -Contain 0
+            $warnings | Should -Not -BeNullOrEmpty
+            ($warnings | Select-Object -First 1).Message | Should -BeLike '*no longer exists*'
+        }
+    }
+
+    Context 'Multiple skills with mixed results' {
+        It 'Returns 1 when at least one skill has errors among valid ones' {
+            $skillsDir = Join-Path $script:ValidationDir 'mixed'
+            New-Item -ItemType Directory -Path $skillsDir -Force | Out-Null
+
+            # Valid skill
+            $validDir = Join-Path $skillsDir 'alpha-skill'
+            New-Item -ItemType Directory -Path $validDir -Force | Out-Null
+            $validContent = @"
+---
+name: alpha-skill
+description: 'Valid skill'
+---
+
+# Alpha Skill
+"@
+            Set-Content -Path (Join-Path $validDir 'SKILL.md') -Value $validContent
+
+            # Invalid skill (missing SKILL.md)
+            $invalidDir = Join-Path $skillsDir 'beta-skill'
+            New-Item -ItemType Directory -Path $invalidDir -Force | Out-Null
+
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:ValidationDir
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'mixed'
+            $exitCode | Should -Be 1
+        }
+    }
+
+    Context 'Repo root resolution' {
+        It 'Uses git rev-parse when available' {
+            $repoRoot = Join-Path $script:ValidationDir 'git-repo'
+            $skillsDir = Join-Path $repoRoot '.github/skills'
+            $skillDir = Join-Path $skillsDir 'repo-skill'
+            New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
+            $content = @"
+---
+name: repo-skill
+description: 'Skill in git repo'
+---
+
+# Repo Skill
+"@
+            Set-Content -Path (Join-Path $skillDir 'SKILL.md') -Value $content
+
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $repoRoot
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath '.github/skills'
+            $exitCode | Should -Be 0
+        }
+
+        It 'Falls back to current directory when git rev-parse fails' {
+            $repoRoot = Join-Path $script:ValidationDir 'fallback-repo'
+            $skillsDir = Join-Path $repoRoot 'my-skills'
+            $skillDir = Join-Path $skillsDir 'fb-skill'
+            New-Item -ItemType Directory -Path $skillDir -Force | Out-Null
+            $content = @"
+---
+name: fb-skill
+description: 'Fallback skill'
+---
+
+# Fallback Skill
+"@
+            Set-Content -Path (Join-Path $skillDir 'SKILL.md') -Value $content
+
+            Mock git {
+                $global:LASTEXITCODE = 128
+                return $null
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            Push-Location $repoRoot
+            try {
+                $exitCode = Invoke-SkillStructureValidation -SkillsPath 'my-skills'
+                $exitCode | Should -Be 0
+            }
+            finally {
+                Pop-Location
+            }
+        }
+    }
+
+    Context 'Error handling' {
+        It 'Returns 1 when an unexpected error occurs' {
+            Mock git {
+                $global:LASTEXITCODE = 0
+                return $script:ValidationDir
+            } -ParameterFilter { $args[0] -eq 'rev-parse' }
+
+            # Create the skills directory so the first Test-Path passes
+            $errSkillsDir = Join-Path $script:ValidationDir 'error-skills'
+            New-Item -ItemType Directory -Path $errSkillsDir -Force | Out-Null
+
+            # Mock Get-ChildItem to throw to trigger catch block
+            Mock Get-ChildItem {
+                throw 'Simulated filesystem error'
+            }
+
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'error-skills' 2>&1 |
+                Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] }
+            $exitCode | Should -Contain 1
         }
     }
 }
