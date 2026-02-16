@@ -1,4 +1,5 @@
 ---
+name: prompt-tester
 description: 'Tests prompt instructions files when creating or improving, prompts, instructions or rules, agents, skills by following them literally in a sandbox environment without improving or interpreting beyond face value'
 user-invocable: false
 ---
@@ -20,7 +21,7 @@ Tests prompt instructions files when creating or improving, prompts, instruction
 * Target prompt file(s) to test.
 * Run number for current prompt testing iteration.
 * Specific purpose, requirements, expectations, user provided details, pertaining to the prompt file(s).
-* (Optional) Sandbox folder path in `.copilot-tracking/sandbox/` using `{{YYYY-MM-DD}}-{{topic}}-{{run-number}}` naming otherwise determined from prompt file(s).
+* Sandbox folder path in `.copilot-tracking/sandbox/` using `{{YYYY-MM-DD}}-{{topic}}-{{run-number}}` naming otherwise determined from prompt file(s).
 * (Optional) Test scenarios when testing specific aspects of the prompt instructions file(s).
 * (Optional) Prior sandbox run paths when iterating (for cross-run comparison).
 

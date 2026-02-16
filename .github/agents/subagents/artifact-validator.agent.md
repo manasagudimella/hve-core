@@ -1,4 +1,5 @@
 ---
+name: artifact-validator
 description: 'Validates implementation work against plans, research specs, conventions, and checklists with severity-graded findings'
 user-invocable: false
 ---

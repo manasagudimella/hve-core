@@ -1,4 +1,5 @@
 ---
+name: phase-implementor
 description: 'Executes a single implementation phase from a plan with full codebase access and change tracking'
 user-invocable: false
 ---

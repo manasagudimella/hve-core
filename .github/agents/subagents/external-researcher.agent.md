@@ -1,4 +1,5 @@
 ---
+name: external-researcher
 description: 'External research requiring fetch web page, github repo, MCP tools, references from official sources'
 user-invocable: false
 ---

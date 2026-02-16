@@ -1,4 +1,5 @@
 ---
+name: prompt-evaluator
 description: 'Evaluates prompt execution results against Prompt Quality Criteria with severity-graded findings and categorized remediation guidance'
 user-invocable: false
 ---
