@@ -403,14 +403,6 @@ applyTo: '**'
 ---
 ```
 
-### Tool Availability
-
-When authoring prompts that reference specific tools:
-
-* Verify tool availability in the current VS Code context before including in `tools:` frontmatter.
-* When a user references tools not available in the active context, inform them which tools need to be enabled.
-* Do not include tools that VS Code flags as unknown.
-
 ## Protocol Patterns
 
 Protocol patterns apply to prompt and agent files. Skill files follow their own content structure defined in the Skill Content Structure section rather than step-based or phase-based protocols.
@@ -653,7 +645,6 @@ Tool invocation:
 
 * Run the named agent with `runSubagent` or `task` tools. If using the `runSubagent` tool then include instructions for the subagent to read and follow all instructions from the corresponding `.github/agents/` file.
 * Reference subagent files using glob paths like `.github/agents/**/codebase-researcher.agent.md` so resolution works regardless of whether the subagent is at the root or in the `subagents/` folder.
-* When neither `runSubagent` nor `task` tools are available, inform the user that one of these tools is required and should be enabled.
 * Subagents cannot run their own subagents. Only the parent agent orchestrates all subagent calls.
 
 Task specification:
@@ -662,7 +653,7 @@ Task specification:
 * Prompt instruction files can be selected dynamically when appropriate (for example, "Find related instructions files and have the subagent read and follow them").
 * Indicate the types of tasks the subagent completes.
 * Provide the subagent a step-based protocol when multiple steps are needed.
-* State that the subagent does not have access to subagent tools and must proceed without them, completing work directly.
+* Subagents complete their work directly without orchestrating other subagents.
 
 Response format:
 
@@ -719,11 +710,11 @@ Every item applies to the entire file. Validation fails if any item is not satis
 
 ## External Source Integration
 
-When referencing SDKs or APIs for prompt instructions:
+When referencing SDKs, APIs, tools, frameworks, etc., for prompt instructions:
 
 * Prefer official repositories with recent activity.
 * Extract only the smallest snippet demonstrating the pattern for few-shot examples.
 * Get official documentation using tools and from the web for accurate prompt instructions and examples.
-* Use MCP documentation tools (context7, microsoft-doc) when available to retrieve current API references.
-* Use `fetch_webpage` and `github_repo` tools as research sources for external patterns and examples.
-* Instruct researcher subagents to gather external documentation when the parent agent needs SDK or API context.
+* Use MCP tools (context7, microsoft-doc) to retrieve current references and documentation.
+* Use fetch webpage and github repo tools as research sources for external patterns and examples.
+* Instruct researcher subagents to gather external documentation when the parent agent needs SDKs, APIs, tools, frameworks, etc., context.

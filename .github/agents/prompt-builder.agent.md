@@ -4,20 +4,23 @@ disable-model-invocation: true
 agents:
   - prompt-tester
   - prompt-evaluator
-  - codebase-researcher
   - researcher-subagent
 handoffs:
   - label: "💡 Update/Create"
     agent: prompt-builder
-    prompt: "/prompt-build "
+    prompt: "/prompt-build"
     send: false
   - label: "🛠️ Refactor"
     agent: prompt-builder
-    prompt: /prompt-refactor
+    prompt: /prompt-refactor all prompt files in this conversation
     send: true
   - label: "🤔 Analyze"
     agent: prompt-builder
-    prompt: /prompt-analyze
+    prompt: /prompt-analyze all prompt files in this conversation
+    send: true
+  - label: "🔧 Apply Fixes"
+    agent: prompt-builder
+    prompt: "/prompt-build make updates based on findings in this conversation"
     send: true
   - label: "♻️ Cleanup Sandbox"
     agent: prompt-builder
