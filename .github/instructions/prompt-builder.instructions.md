@@ -404,11 +404,10 @@ Optional fields available by file type:
 
 * `tools:` - Tool restrictions for agents and subagents. When omitted, all tools are accessible. When specified, list only tools available in the current VS Code context.
 * `handoffs:` - Agent handoff declarations. Each entry includes `label` (display text, supports emoji), `agent` (target agent name), and optionally `prompt` (slash command to invoke) and `send` (boolean, auto-send the prompt when `true`).
-* `user-invocable:` - Boolean. Set to `false` to hide the agent from the user and prevent direct invocation. Defaults to `true` when omitted. Use for subagents that should not appear in the agent picker.
+* `user-invocable:` - Boolean. Set to `false` to hide the artifact from the user and prevent direct invocation. Defaults to `true` when omitted. Use for subagents that should not appear in the agent picker or background-only skills that should not appear in the slash command menu.
 * `disable-model-invocation:` - Boolean. Set to `true` to prevent Copilot from automatically invoking the agent. Use for agents that run subagents, agents that cause side effects (git operations, backlog management, deployments), or agents that should only run when explicitly requested. Defaults to `false` when omitted.
 * `agent:` - Agent delegation for prompt files.
 * `argument-hint:` - Hint text for prompt picker display.
-* `user-invokable:` - Controls slash command menu visibility for skills. Defaults to `true`. Set `false` for background-only skills.
 * `model:` - Model specification. Accepts any valid model identifier string (for example, `gpt-4o`, `claude-sonnet-4`). When omitted, the default model is used.
 
 ### Frontmatter Examples
