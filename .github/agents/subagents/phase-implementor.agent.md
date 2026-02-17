@@ -46,6 +46,12 @@ Implement each step in the phase sequentially:
 * When additional context is needed during execution, use available search tools to find relevant patterns in the codebase.
 * Run validation commands between steps when specified.
 
+When a step is blocked or cannot proceed:
+
+* Continue with remaining steps only when they are independent of the blocked step.
+* Stop execution when a blocked step prevents remaining steps from completing.
+* Proceed to Step 4 (Report Completion) with Status set to Partial or Blocked, documenting the blocker and any completed work.
+
 ### Step 3: Validate Phase
 
 When validation commands are specified:
@@ -57,6 +63,12 @@ When validation commands are specified:
 ### Step 4: Report Completion
 
 Return the structured completion report using the Response Format.
+
+## Required Protocol
+
+1. Follow all Required Steps in order.
+2. When a blocking issue is encountered mid-execution, apply the early-return rules from Step 2 rather than guessing or continuing silently.
+3. Report all steps attempted in the completion report, including partial progress on incomplete steps.
 
 ## Response Format
 
