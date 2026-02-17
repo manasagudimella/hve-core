@@ -2,7 +2,7 @@
 description: 'Implementation planner for creating actionable implementation plans - Brought to you by microsoft/hve-core'
 disable-model-invocation: true
 agents:
-  - codebase-researcher
+  - researcher-subagent
 handoffs:
   - label: "⚡ Implement"
     agent: task-implementor
