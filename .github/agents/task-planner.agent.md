@@ -594,10 +594,10 @@ When planning reveals decisions requiring user input, present them using the PD 
 
 {{context_and_why_this_matters}}
 
-| Option | Description | Trade-off |
-|--------|-------------|-----------|
-| A | {{option_a}} | {{trade_off_a}} |
-| B | {{option_b}} | {{trade_off_b}} |
+| Option | Description  | Trade-off       |
+|--------|--------------|-----------------|
+| A      | {{option_a}} | {{trade_off_a}} |
+| B      | {{option_b}} | {{trade_off_b}} |
 
 **Recommendation**: Option {{X}} because {{rationale}}.
 

@@ -2,7 +2,7 @@
 description: 'Autonomous documentation operations agent for pattern compliance, accuracy verification, and gap detection - Brought to you by microsoft/hve-core'
 disable-model-invocation: true
 agents:
-  - codebase-researcher
+  - researcher-subagent
   - phase-implementor
 ---
 
@@ -19,7 +19,7 @@ Autonomous agent for documentation quality assurance. Discovers divergences from
 
 ## Tool Availability
 
-This agent runs subagents for all documentation processing. Run `codebase-researcher` or `phase-implementor` agents with `runSubagent` or `task` tools. If using the `runSubagent` tool then include instructions for the subagent to read and follow all instructions from the corresponding `.github/agents/` file.
+This agent runs subagents for all documentation processing. Run `researcher-subagent` or `phase-implementor` agents with `runSubagent` or `task` tools. If using the `runSubagent` tool then include instructions for the subagent to read and follow all instructions from the corresponding `.github/agents/` file.
 
 * When a `runSubagent` or `task` tool is available, run subagents as specified in each phase.
 * When neither `runSubagent` nor `task` tools are available, inform the user that one of these tools is required and should be enabled.
@@ -139,11 +139,11 @@ Update the session file after each phase with discoveries, plan items, and compl
 
 ### Phase 1: Discovery
 
-Run three `codebase-researcher` agents in parallel with `runSubagent` or `task` tools to discover issues across all capabilities. If using the `runSubagent` tool then include instructions for each to read and follow all instructions from `.github/agents/**/codebase-researcher.agent.md`.
+Run three `researcher-subagent` agents in parallel with `runSubagent` or `task` tools to discover issues across all capabilities. If using the `runSubagent` tool then include instructions for each to read and follow all instructions from `.github/agents/**/researcher-subagent.agent.md`.
 
 #### Pattern Compliance Discovery
 
-Run a `codebase-researcher` agent with:
+Run a `researcher-subagent` agent with:
 
 * Task: Scan all in-scope files for divergences from writing-style.instructions.md and markdown.instructions.md.
 * Instructions to read: [writing-style.instructions.md](.github/instructions/writing-style.instructions.md), [markdown.instructions.md](.github/instructions/markdown.instructions.md).
@@ -153,7 +153,7 @@ Run a `codebase-researcher` agent with:
 
 #### Accuracy Checking Discovery
 
-Run a `codebase-researcher` agent with:
+Run a `researcher-subagent` agent with:
 
 * Task: Compare documentation claims against actual implementation.
 * Focus areas: Script parameter documentation in scripts/, file structure descriptions in docs/, example commands and their expected behavior.
@@ -162,7 +162,7 @@ Run a `codebase-researcher` agent with:
 
 #### Missing Documentation Discovery
 
-Run a `codebase-researcher` agent with:
+Run a `researcher-subagent` agent with:
 
 * Task: Identify undocumented functionality.
 * Scan locations: scripts/ (scripts without README or usage docs), extension/ (undocumented features), .github/skills/ (skills without adequate documentation).
@@ -179,7 +179,7 @@ After all discovery subagents complete:
 
 Run a planning subagent to create a prioritized work plan.
 
-Run a `codebase-researcher` agent with `runSubagent` or `task` tools with inline instructions. If using the `runSubagent` tool then include instructions to read and follow all instructions from `.github/agents/**/codebase-researcher.agent.md`:
+Run a `researcher-subagent` agent with `runSubagent` or `task` tools with inline instructions. If using the `runSubagent` tool then include instructions to read and follow all instructions from `.github/agents/**/researcher-subagent.agent.md`:
 
 * Task: Create a work plan from discovered issues.
 * Input: Read the session file Discovered Issues section.

@@ -4,6 +4,7 @@ disable-model-invocation: true
 agents:
   - prompt-tester
   - prompt-evaluator
+  - prompt-updater
   - researcher-subagent
 handoffs:
   - label: "💡 Update/Create"

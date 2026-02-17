@@ -54,6 +54,8 @@ items:
     kind: agent
   - path: .github/agents/subagents/prompt-tester.agent.md
     kind: agent
+  - path: .github/agents/subagents/prompt-updater.agent.md
+    kind: agent
   # Prompts
   - path: .github/prompts/doc-ops-update.prompt.md
     kind: prompt

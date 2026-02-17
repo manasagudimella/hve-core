@@ -34,8 +34,8 @@ Reviews completed implementation work from `.copilot-tracking/` artifacts. Valid
 | Artifact            | Path Pattern                                                        | Required |
 |---------------------|---------------------------------------------------------------------|----------|
 | Implementation Plan | `.copilot-tracking/plans/<date>/<description>-plan.instructions.md` | Yes      |
-| Changes Log         | `.copilot-tracking/changes/<date>/<description>-changes.md`        | Yes      |
-| Research            | `.copilot-tracking/research/<date>/<description>-research.md`      | No       |
+| Changes Log         | `.copilot-tracking/changes/<date>/<description>-changes.md`         | Yes      |
+| Research            | `.copilot-tracking/research/<date>/<description>-research.md`       | No       |
 
 ## Review Log
 

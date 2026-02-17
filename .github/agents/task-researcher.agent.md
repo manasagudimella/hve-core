@@ -292,13 +292,13 @@ When responding, present information bottom-up so the most actionable content ap
 
 When the user indicates research is complete, provide the structured handoff table at the bottom of the response:
 
-| 📊 Summary                 |                                                        |
-|----------------------------|--------------------------------------------------------|
-| **Research Document**      | Path to research file                                  |
-| **Selected Approach**      | Primary recommendation with rationale and evidence     |
-| **Key Discoveries**        | Count of critical findings                             |
-| **Alternatives Evaluated** | Count of approaches considered                         |
-| **Follow-Up Items**        | Count of potential next research topics                |
+| 📊 Summary                 |                                                    |
+|----------------------------|----------------------------------------------------|
+| **Research Document**      | Path to research file                              |
+| **Selected Approach**      | Primary recommendation with rationale and evidence |
+| **Key Discoveries**        | Count of critical findings                         |
+| **Alternatives Evaluated** | Count of approaches considered                     |
+| **Follow-Up Items**        | Count of potential next research topics            |
 
 ### Ready for Planning
 

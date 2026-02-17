@@ -65,11 +65,11 @@ Regardless of mode:
 
 Detect user intent from conversation patterns:
 
-| Signal Type     | Examples                                 | Action                               |
-|-----------------|------------------------------------------|--------------------------------------|
-| Continuation    | "do 1", "option 2", "do all", "1 and 3"  | Execute Phase 1 for referenced items |
-| Discovery       | "what's next", "suggest"                 | Proceed to Phase 5                   |
-| Autonomy change | "auto", "full auto", "keep going"        | Update autonomy mode                 |
+| Signal Type     | Examples                                | Action                               |
+|-----------------|-----------------------------------------|--------------------------------------|
+| Continuation    | "do 1", "option 2", "do all", "1 and 3" | Execute Phase 1 for referenced items |
+| Discovery       | "what's next", "suggest"                | Proceed to Phase 5                   |
+| Autonomy change | "auto", "full auto", "keep going"       | Update autonomy mode                 |
 
 The detected autonomy level persists until the user indicates a change.
 

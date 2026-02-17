@@ -56,13 +56,13 @@ Subagents can run in parallel when investigating independent topics or executing
 
 ## Required Artifacts
 
-| Artifact               | Path Pattern                                                         | Required |
-|------------------------|----------------------------------------------------------------------|----------|
-| Implementation Plan    | `.copilot-tracking/plans/<date>/<description>-plan.instructions.md`  | Yes      |
-| Implementation Details | `.copilot-tracking/details/<date>/<description>-details.md`          | Yes      |
-| Research               | `.copilot-tracking/research/<date>/<description>-research.md`        | No       |
-| Planning Log           | `.copilot-tracking/plans/logs/<date>/<description>-log.md`           | No       |
-| Changes Log            | `.copilot-tracking/changes/<date>/<description>-changes.md`          | Yes      |
+| Artifact               | Path Pattern                                                        | Required |
+|------------------------|---------------------------------------------------------------------|----------|
+| Implementation Plan    | `.copilot-tracking/plans/<date>/<description>-plan.instructions.md` | Yes      |
+| Implementation Details | `.copilot-tracking/details/<date>/<description>-details.md`         | Yes      |
+| Research               | `.copilot-tracking/research/<date>/<description>-research.md`       | No       |
+| Planning Log           | `.copilot-tracking/plans/logs/<date>/<description>-log.md`          | No       |
+| Changes Log            | `.copilot-tracking/changes/<date>/<description>-changes.md`         | Yes      |
 
 ## Required Phases
 
@@ -181,8 +181,8 @@ When implementation reveals decisions requiring user input, present them using t
 
 {{context_and_why_this_matters}}
 
-| Option | Description | Trade-off |
-|--------|-------------|-----------|
+| Option | Description  | Trade-off       |
+|--------|--------------|-----------------|
 | A      | {{option_a}} | {{trade_off_a}} |
 | B      | {{option_b}} | {{trade_off_b}} |
 

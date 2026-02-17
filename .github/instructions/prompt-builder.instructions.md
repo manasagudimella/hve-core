@@ -33,7 +33,11 @@ Consider adding sequential steps when the prompt involves multiple distinct acti
 
 #### Agent Delegation
 
-Prompts that set `agent:` to a custom agent inherit the agent's protocol, including its phases, steps, and subagent orchestration. Avoid adding Required Phases, Required Steps, or Required Protocol sections that duplicate or conflict with the parent agent's protocol. Instead, reference specific phases or sections from the parent agent when the prompt customizes or limits the agent's behavior (for example, "Follow Phase 1 only" or "Skip Phase 2"). Use a Required Protocol section to add execution meta-rules not defined by the parent agent, such as iteration constraints, scope boundaries, or phase sequencing. Reserve Required Steps for prompt files that define their own workflow independent of the delegated agent's protocol.
+Prompts that set `agent:` to a custom agent inherit the agent's protocol, including its phases, steps, and subagent orchestration.
+Avoid adding Required Phases, Required Steps, or Required Protocol sections that duplicate or conflict with the parent agent's protocol.
+Instead, reference specific phases or sections from the parent agent when the prompt customizes or limits the agent's behavior (for example, "Follow Phase 1 only" or "Skip Phase 2").
+Use a Required Protocol section to add execution meta-rules not defined by the parent agent, such as iteration constraints, scope boundaries, or phase sequencing.
+Reserve Required Steps for prompt files that define their own workflow independent of the delegated agent's protocol.
 
 Prompts extending agent behavior focus on what differs from the default: scoped inputs, additional requirements, or workflow restrictions.
 

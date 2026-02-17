@@ -130,7 +130,9 @@ Assess how the changed files conform to architectural patterns, layers, and modu
 
 #### Design Principles Validation (`design-principles`)
 
-Assess adherence to established design principles. SOLID is one important framework, but also consider composition over inheritance, principle of least surprise, law of Demeter, separation of concerns, and other patterns relevant to the codebase. Look for classes handling multiple unrelated concerns, tight coupling between modules, interface pollution, and concrete dependencies where abstractions are warranted. Identify design pattern misuse or missed opportunities where established patterns would simplify the implementation. Do not refactor implementation code to resolve design violations.
+Assess adherence to established design principles. SOLID is one important framework, but also consider composition over inheritance, principle of least surprise, law of Demeter, separation of concerns, and other patterns relevant to the codebase.
+Look for classes handling multiple unrelated concerns, tight coupling between modules, interface pollution, and concrete dependencies where abstractions are warranted.
+Identify design pattern misuse or missed opportunities where established patterns would simplify the implementation. Do not refactor implementation code to resolve design violations.
 
 #### DRY Analysis (`dry-analysis`)
 
@@ -158,13 +160,22 @@ Identify code paths, branches, and edge cases in changed files. Search for exist
 
 #### Security Validation (`security`)
 
-Assess the security posture of changed files by examining how the implementation handles trust boundaries, sensitive data, and access control. Look for hardcoded passwords, API keys, connection strings, tokens, or certificates in source files, configuration, or logs, verifying that secrets are sourced from secure stores rather than committed to version control. Verify that new or modified endpoints, handlers, and entry points enforce the same access control policies as existing protected paths, and identify routes or operations that bypass established authentication middleware or authorization checks.
+Assess the security posture of changed files by examining how the implementation handles trust boundaries, sensitive data, and access control.
+Look for hardcoded passwords, API keys, connection strings, tokens, or certificates in source files, configuration, or logs, verifying that secrets are sourced from secure stores rather than committed to version control.
+Verify that new or modified endpoints, handlers, and entry points enforce the same access control policies as existing protected paths, and identify routes or operations that bypass established authentication middleware or authorization checks.
 
-Examine whether user-controlled input flows through validation or sanitization before reaching databases, file systems, command execution, or rendered output, considering SQL injection, command injection, path traversal, and cross-site scripting vectors. Determine whether changes weaken existing security controls, bypass established trust boundaries, remove or relax validation rules, or downgrade encryption or hashing algorithms by comparing the security posture before and after the change. Identify new endpoints, listeners, open ports, deserialization entry points, file upload handlers, or external integrations introduced by the changes, and assess whether each new surface area has appropriate access controls, rate limiting, and input validation. Check whether modifications to shared utilities, middleware, or configuration files unintentionally remove protections that other parts of the codebase depend on. When security instruction files or threat models exist in the repository, compare the implementation against documented security requirements and mitigations. Do not run security scanners or penetration testing tools.
+Examine whether user-controlled input flows through validation or sanitization before reaching databases, file systems, command execution, or rendered output, considering SQL injection, command injection, path traversal, and cross-site scripting vectors.
+Determine whether changes weaken existing security controls, bypass established trust boundaries, remove or relax validation rules, or downgrade encryption or hashing algorithms by comparing the security posture before and after the change.
+Identify new endpoints, listeners, open ports, deserialization entry points, file upload handlers, or external integrations introduced by the changes, and assess whether each new surface area has appropriate access controls, rate limiting, and input validation.
+Check whether modifications to shared utilities, middleware, or configuration files unintentionally remove protections that other parts of the codebase depend on.
+When security instruction files or threat models exist in the repository, compare the implementation against documented security requirements and mitigations. Do not run security scanners or penetration testing tools.
 
 #### Full Quality Review (`full-quality`)
 
-Execute all validation categories above, then perform a holistic assessment of the implementation. Beyond individual category findings, evaluate emergent qualities: overall cohesion, consistency of coding style across changed files, fitness for purpose, and operational readiness. Identify compound issues where findings from multiple categories interact or amplify each other. Record the holistic assessment as a narrative Holistic Assessment section in the validation log, separate from the categorized IV-NNN findings.
+Execute all validation categories above, then perform a holistic assessment of the implementation.
+Beyond individual category findings, evaluate emergent qualities: overall cohesion, consistency of coding style across changed files, fitness for purpose, and operational readiness.
+Identify compound issues where findings from multiple categories interact or amplify each other.
+Record the holistic assessment as a narrative Holistic Assessment section in the validation log, separate from the categorized IV-NNN findings.
 
 #### Beyond Predefined Categories
 

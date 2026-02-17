@@ -40,6 +40,8 @@ items:
     kind: agent
   - path: .github/agents/subagents/prompt-tester.agent.md
     kind: agent
+  - path: .github/agents/subagents/prompt-updater.agent.md
+    kind: agent
   # RPI prompts
   - path: .github/prompts/rpi.prompt.md
     kind: prompt
