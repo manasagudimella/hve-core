@@ -94,6 +94,14 @@ function Write-ConsistencyLog {
     }
 
     Write-Host "[$timestamp] [$Level] $Message" -ForegroundColor $color
+
+    # Surface warnings and errors as CI annotations so they appear in the Actions/ADO UI
+    if ($Level -eq 'Warning') {
+        Write-CIAnnotation -Message $Message -Level Warning
+    }
+    elseif ($Level -eq 'Error') {
+        Write-CIAnnotation -Message $Message -Level Error
+    }
 }
 
 function Get-ActionVersionViolations {

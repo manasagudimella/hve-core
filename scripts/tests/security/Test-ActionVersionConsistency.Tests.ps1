@@ -52,6 +52,33 @@ Describe 'Write-ConsistencyLog' -Tag 'Unit' {
             { Write-ConsistencyLog -Message 'Default level test' } | Should -Not -Throw
         }
     }
+
+    Context 'CI annotation forwarding' {
+        BeforeAll {
+            Mock Write-CIAnnotation {}
+            Mock Write-Host {}
+        }
+
+        It 'Forwards Warning level to Write-CIAnnotation' {
+            Write-ConsistencyLog -Message 'warn msg' -Level Warning
+            Should -Invoke Write-CIAnnotation -Times 1 -Exactly -ParameterFilter {
+                $Message -eq 'warn msg' -and $Level -eq 'Warning'
+            }
+        }
+
+        It 'Forwards Error level to Write-CIAnnotation' {
+            Write-ConsistencyLog -Message 'err msg' -Level Error
+            Should -Invoke Write-CIAnnotation -Times 1 -Exactly -ParameterFilter {
+                $Message -eq 'err msg' -and $Level -eq 'Error'
+            }
+        }
+
+        It 'Does not forward Info or Success levels to Write-CIAnnotation' {
+            Write-ConsistencyLog -Message 'info msg' -Level Info
+            Write-ConsistencyLog -Message 'success msg' -Level Success
+            Should -Invoke Write-CIAnnotation -Times 0 -Exactly
+        }
+    }
 }
 
 Describe 'Get-ActionVersionViolations' -Tag 'Unit' {
@@ -506,7 +533,7 @@ Describe 'Invoke-ActionVersionConsistency' -Tag 'Unit' {
 
             $null = Invoke-ActionVersionConsistency -Path $testPath -Format Table
 
-            Should -Invoke Write-CIAnnotation -ParameterFilter { $Level -eq 'Warning' } -Times 1 -Exactly
+            Should -Invoke Write-CIAnnotation -ParameterFilter { $Level -eq 'Warning' -and $null -ne $File } -Times 1 -Exactly
         }
 
         It 'Emits Error annotation for version mismatch' {
