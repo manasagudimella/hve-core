@@ -3,7 +3,7 @@ description: 'Executes implementation plans from .copilot-tracking/plans with pr
 disable-model-invocation: true
 agents:
   - phase-implementor
-  - codebase-researcher
+  - researcher-subagent
 handoffs:
   - label: "✅ Review"
     agent: task-reviewer
