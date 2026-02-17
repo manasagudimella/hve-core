@@ -13,6 +13,11 @@ on:
         required: false
         type: boolean
         default: true
+      base-branch:
+        description: 'Base branch or SHA for change detection (defaults to origin/main)'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -36,6 +41,10 @@ jobs:
           $params = @{}
           if ('${{ inputs.changed-files-only }}' -eq 'true') {
             $params['ChangedFilesOnly'] = $true
+            $baseBranch = '${{ inputs.base-branch }}'
+            if (-not [string]::IsNullOrEmpty($baseBranch)) {
+              $params['BaseBranch'] = $baseBranch
+            }
           }
           & './scripts/linting/Validate-SkillStructure.ps1' -WarningsAsErrors @params
         continue-on-error: ${{ inputs.soft-fail }}

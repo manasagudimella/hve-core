@@ -449,7 +449,7 @@ function Invoke-SkillStructureValidation {
                     $results += Test-SkillDirectory -Directory $dirInfo -RepoRoot $repoRoot
                 }
                 else {
-                    Write-Warning "Changed skill directory '$skillName' no longer exists (may have been deleted)"
+                    Write-Host "  ⏭️  Skill '$skillName' was deleted - skipping validation" -ForegroundColor DarkGray
                 }
             }
 

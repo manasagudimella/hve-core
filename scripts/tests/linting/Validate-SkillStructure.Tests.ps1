@@ -1081,7 +1081,7 @@ name: bad-skill
             $exitCode | Should -Be 1
         }
 
-        It 'Returns 0 and warns when changed skill was deleted' {
+        It 'Returns 0 and skips validation when changed skill was deleted' {
             $skillsDir = Join-Path $script:ValidationDir 'changed-deleted'
             New-Item -ItemType Directory -Path $skillsDir -Force | Out-Null
 
@@ -1094,14 +1094,8 @@ name: bad-skill
                 return [string[]]@('deleted-skill')
             }
 
-            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'changed-deleted' -ChangedFilesOnly 3>&1
-            # Filter warnings from return value
-            $warnings = @($exitCode | Where-Object { $_ -is [System.Management.Automation.WarningRecord] })
-            $values = @($exitCode | Where-Object { $_ -isnot [System.Management.Automation.WarningRecord] })
-
-            $values | Should -Contain 0
-            $warnings | Should -Not -BeNullOrEmpty
-            ($warnings | Select-Object -First 1).Message | Should -BeLike '*no longer exists*'
+            $exitCode = Invoke-SkillStructureValidation -SkillsPath 'changed-deleted' -ChangedFilesOnly
+            $exitCode | Should -Be 0
         }
     }
 
