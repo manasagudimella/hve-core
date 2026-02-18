@@ -16,6 +16,12 @@
       "version": "2.3.10"
     },
     {
+      "name": "code-reviewer",
+      "source": "./plugins/code-reviewer",
+      "description": "Pull request review with automated analysis and feedback",
+      "version": "2.3.10"
+    },
+    {
       "name": "coding-standards",
       "source": "./plugins/coding-standards",
       "description": "Language-specific coding instructions for bash, Bicep, C#, Python, and Terraform projects",
@@ -25,6 +31,12 @@
       "name": "data-science",
       "source": "./plugins/data-science",
       "description": "Data specification generation, Jupyter notebooks, and Streamlit dashboards",
+      "version": "2.3.10"
+    },
+    {
+      "name": "experimental",
+      "source": "./plugins/experimental",
+      "description": "Experimental and preview artifacts not yet promoted to stable collections",
       "version": "2.3.10"
     },
     {
@@ -40,15 +52,15 @@
       "version": "2.3.10"
     },
     {
-      "name": "project-planning",
-      "source": "./plugins/project-planning",
-      "description": "PRDs, BRDs, ADRs, architecture diagrams, and documentation operations",
+      "name": "installer",
+      "source": "./plugins/installer",
+      "description": "Interactive installer agent for deploying HVE Core artifacts across workspace configurations",
       "version": "2.3.10"
     },
     {
-      "name": "prompt-engineering",
-      "source": "./plugins/prompt-engineering",
-      "description": "Tools for analyzing, building, and refactoring prompts, agents, and instructions",
+      "name": "project-planning",
+      "source": "./plugins/project-planning",
+      "description": "PRDs, BRDs, ADRs, and architecture diagrams",
       "version": "2.3.10"
     },
     {
