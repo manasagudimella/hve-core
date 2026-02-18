@@ -12,6 +12,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Note:** This file is automatically maintained by [release-please](https://github.com/googleapis/release-please). Do not edit manually.
 
+## [2.4.0](https://github.com/microsoft/hve-core/compare/hve-core-v2.3.10...hve-core-v2.4.0) (2026-02-18)
+
+
+### ✨ Features
+
+* **agents:** add agile-coach agent ([#562](https://github.com/microsoft/hve-core/issues/562)) ([de8d86c](https://github.com/microsoft/hve-core/commit/de8d86c8609df811499c206f7fc644555ee4e903))
+* **agents:** add product manager advisor and UX/UI designer agents ([#627](https://github.com/microsoft/hve-core/issues/627)) ([539eb8a](https://github.com/microsoft/hve-core/commit/539eb8ab8aacf79dcb833d9df72c64d12000af8a))
+* **scripts:** add per-violation CI annotations and colorized console output ([#637](https://github.com/microsoft/hve-core/issues/637)) ([bd7d512](https://github.com/microsoft/hve-core/commit/bd7d512209499b201a0c672899ee2a81c1cfc94d))
+* **skills:** edit SKILL frontmatter schema, add CI validation, and documentation ([#625](https://github.com/microsoft/hve-core/issues/625)) ([0138a78](https://github.com/microsoft/hve-core/commit/0138a78abb05059fb36cec9c029fdd58f54d2d5b))
+* **skills:** mandate unit testing and document language support ([#636](https://github.com/microsoft/hve-core/issues/636)) ([9263617](https://github.com/microsoft/hve-core/commit/9263617806792ba6bfaa06c778c7195b05f40d5f))
+
+
+### 🐛 Bug Fixes
+
+* **scripts:** add CI annotations and step summary to copyright header check ([#638](https://github.com/microsoft/hve-core/issues/638)) ([5fa6328](https://github.com/microsoft/hve-core/commit/5fa63281cac96faae6f7442d726651d45934d466))
+* **scripts:** add per-violation Write-Host and Write-CIAnnotation output to Test-DependencyPinning ([#640](https://github.com/microsoft/hve-core/issues/640)) ([9d3b71d](https://github.com/microsoft/hve-core/commit/9d3b71dc43e9762943c5092d855086f55dcb8473))
+
+
+### 🔧 Maintenance
+
+* **deps-dev:** bump markdownlint-cli2 from 0.20.0 to 0.21.0 in the npm-dependencies group ([#609](https://github.com/microsoft/hve-core/issues/609)) ([1486dd7](https://github.com/microsoft/hve-core/commit/1486dd72b1f4175a42ae376bc4ec8f1026058b9e))
+
 ## [2.3.10](https://github.com/microsoft/hve-core/compare/hve-core-v2.3.9...hve-core-v2.3.10) (2026-02-17)
 
 
