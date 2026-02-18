@@ -9,7 +9,8 @@
 
 #Requires -Version 7.0
 
-Import-Module (Join-Path $PSScriptRoot '../../lib/Modules/CIHelpers.psm1') -Force
+# Omit -Force so the standalone CIHelpers export is not shadowed by a nested re-import.
+Import-Module (Join-Path $PSScriptRoot '../../lib/Modules/CIHelpers.psm1')
 
 function Write-SecurityLog {
     <#
