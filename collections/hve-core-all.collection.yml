@@ -231,6 +231,9 @@ items:
 - path: .github/instructions/design-thinking/dt-method-05-concepts.instructions.md
   kind: instruction
   maturity: experimental
+- path: .github/instructions/design-thinking/dt-method-06-deep.instructions.md
+  kind: instruction
+  maturity: experimental
 - path: .github/instructions/design-thinking/dt-method-06-lofi-prototypes.instructions.md
   kind: instruction
   maturity: experimental
