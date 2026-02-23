@@ -13,9 +13,10 @@ copilot plugin install design-thinking@hve-core
 
 ## Agents
 
-| Agent    | Description                                                                                                                                       |
-|----------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| dt-coach | Design Thinking coach guiding teams through the 9-method HVE framework with Think/Speak/Empower philosophy - Brought to you by microsoft/hve-core |
+| Agent             | Description                                                                                                                                       |
+|-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| dt-coach          | Design Thinking coach guiding teams through the 9-method HVE framework with Think/Speak/Empower philosophy - Brought to you by microsoft/hve-core |
+| dt-learning-tutor | Design Thinking learning tutor providing structured curriculum, comprehension checks, and adaptive pacing - Brought to you by microsoft/hve-core  |
 
 ## Commands
 
@@ -48,6 +49,7 @@ copilot plugin install design-thinking@hve-core
 | dt-coaching-state                    | Coaching state schema for Design Thinking session persistence, method progress tracking, and session recovery                                                                                                                              |
 | dt-industry-healthcare               | Healthcare industry context for DT coaching — vocabulary, constraints, empathy tools, and reference scenarios                                                                                                                              |
 | dt-rpi-handoff-contract              | DT-to-RPI handoff contract defining exit points, artifact schemas, and per-agent input requirements for lateral transitions from Design Thinking to RPI workflow                                                                           |
+| dt-rpi-implement-context             | DT-aware task-implementor context: fidelity constraints, stakeholder validation, and iteration support                                                                                                                                     |
 | dt-rpi-planning-context              | DT-aware task-planner context: fidelity constraints, iteration support, and confidence-informed planning for DT artifacts                                                                                                                  |
 | dt-rpi-research-context              | DT-aware task-researcher context — frames research around DT methods, stakeholder needs, and empathy-driven inquiry                                                                                                                        |
 | dt-rpi-review-context                | DT-aware task-reviewer context: quality criteria for Design Thinking artifacts                                                                                                                                                             |
