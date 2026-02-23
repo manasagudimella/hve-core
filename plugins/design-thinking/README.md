@@ -27,6 +27,13 @@ copilot plugin install design-thinking@hve-core
 | dt-handoff-implementation-space | Compiles DT Methods 7-9 outputs into RPI-ready handoff artifact with tiered routing                                                          |
 | dt-handoff-problem-space        | Problem Space exit handoff — compiles DT Methods 1-3 outputs into RPI-ready artifact targeting task-researcher                               |
 | dt-handoff-solution-space       | Solution Space exit handoff — compiles DT Methods 4-6 outputs into RPI-ready artifact targeting task-planner                                 |
+| dt-method-04-ideation           | Divergent ideation for Design Thinking Method 4b with constraint-informed solution generation - Brought to you by microsoft/hve-core         |
+| dt-method-04-convergence        | Theme discovery for Design Thinking Method 4c through philosophy-based clustering - Brought to you by microsoft/hve-core                     |
+| dt-method-05-concepts           | Concept articulation for Design Thinking Method 5b from brainstorming themes - Brought to you by microsoft/hve-core                          |
+| dt-method-05-evaluation         | Stakeholder alignment and three-lens evaluation for Design Thinking Method 5c - Brought to you by microsoft/hve-core                         |
+| dt-method-06-planning           | Concept analysis and prototype approach design for Design Thinking Method 6a - Brought to you by microsoft/hve-core                          |
+| dt-method-06-building           | Scrappy prototype building with fidelity enforcement for Design Thinking Method 6b - Brought to you by microsoft/hve-core                    |
+| dt-method-06-testing            | Hypothesis-driven testing and constraint validation for Design Thinking Method 6c - Brought to you by microsoft/hve-core                     |
 
 ## Instructions
 
@@ -56,6 +63,10 @@ copilot plugin install design-thinking@hve-core
 | dt-method-09-deep                    | Deep expertise for Method 9: Iteration at Scale — change management, scaling, and adoption measurement                                                                                                                                     |
 | dt-industry-manufacturing            | Manufacturing industry context for DT coaching — vocabulary, constraints, empathy tools, and reference scenarios                                                                                                                           |
 | dt-industry-energy                   | Energy industry context for DT coaching — vocabulary, constraints, empathy tools, and reference scenarios                                                                                                                                  |
+| dt-image-prompt-generation           | M365 Copilot image prompt generation techniques for Design Thinking Method 5 concept visualization with lo-fi enforcement                                                                                                                  |
+| dt-method-04-brainstorming           | Design Thinking Method 4: AI-assisted brainstorming with divergent ideation and convergent clustering for solution space entry                                                                                                             |
+| dt-method-05-concepts                | Design Thinking Method 5: User Concepts coaching with concept articulation, three-lens evaluation, and stakeholder alignment for Solution Space development                                                                                |
+| dt-method-06-lofi-prototypes         | Design Thinking Method 6: Lo-fi prototyping techniques, scrappy enforcement, feedback planning, and constraint discovery for Solution Space exit                                                                                           |
 | dt-curriculum-01-scoping             | DT Curriculum Module 1: Scope Conversations — concepts, techniques, checks, and exercises                                                                                                                                                  |
 | dt-curriculum-02-research            | DT Curriculum Module 2: Design Research — concepts, techniques, checks, and exercises                                                                                                                                                      |
 | dt-curriculum-03-synthesis           | DT Curriculum Module 3: Synthesis — concepts, techniques, checks, and exercises                                                                                                                                                            |

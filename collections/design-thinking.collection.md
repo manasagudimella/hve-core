@@ -7,6 +7,13 @@ This collection includes agents, prompts, and instructions for:
 - **DT Method Next** — Assesses current coaching state and recommends the next method with sequencing validation, handling edge cases for no project, all methods complete, and iteration loops
 - **DT Handoff Implementation Space** — Implementation Space exit handoff that compiles DT Methods 7-9 outputs into an RPI-ready artifact with tiered routing to task-planner or task-implementor, handoff lineage from all nine methods, content sanitization, and a completion ceremony
 - **DT Handoff Problem Space** — Problem Space exit handoff that compiles DT Methods 1-3 outputs into an RPI-ready artifact targeting task-researcher, with readiness assessment and quality markers
+- **DT Method 4: Ideation** — Divergent idea generation with constraint-informed creativity for Method 4b brainstorming
+- **DT Method 4: Convergence** — Theme discovery through philosophy-based clustering for Method 4c brainstorming
+- **DT Method 5: Concepts** — Concept articulation from brainstorming themes for Method 5b user concepts
+- **DT Method 5: Evaluation** — Stakeholder alignment and three-lens evaluation for Method 5c user concepts
+- **DT Method 6: Planning** — Concept analysis and prototype approach design for Method 6a lo-fi prototyping
+- **DT Method 6: Building** — Scrappy prototype building with fidelity enforcement for Method 6b
+- **DT Method 6: Testing** — Hypothesis-driven testing and constraint validation for Method 6c
 - **DT Coaching Identity** — Defines the coach's interaction philosophy (Think, Speak, Empower), progressive hint engine, psychological safety patterns, and hat-switching framework for consistent behavior across all nine methods
 - **DT Coach**: Conversational coaching agent that guides teams through all 9 methods with Think/Speak/Empower philosophy
 - **DT Coaching State** — Session persistence schema, method progress tracking, and session recovery protocol enabling the coach to resume seamlessly across conversations
