@@ -140,6 +140,7 @@ Describe 'Invoke-ExtensionCollectionsGeneration' {
             description = 'Default description'
             publisher   = 'test-pub'
             engines     = @{ vscode = '^1.80.0' }
+            categories  = @('Chat')
             contributes = @{}
         } | ConvertTo-Json -Depth 5 | Set-Content -Path (Join-Path $templatesDir 'package.template.json')
 
@@ -151,12 +152,18 @@ displayName: HVE Core
 description: All artifacts
 "@ | Set-Content -Path (Join-Path $collectionsDir 'hve-core.collection.yml')
 
-        # ado collection
+        # ado collection (with categories and keywords to test overrides)
         @"
 id: ado
 name: ADO Workflow
 displayName: HVE Core - ADO Workflow
 description: ADO workflow agents
+categories:
+  - Education
+  - Other
+keywords:
+  - ado
+  - devops
 "@ | Set-Content -Path (Join-Path $collectionsDir 'ado.collection.yml')
 
         # hve-core-all collection (no description to test fallback)
@@ -220,6 +227,22 @@ displayName: HVE Core - All
         $pkg.displayName | Should -Be 'HVE Core - All'
         # Falls back to template description when collection lacks description
         $pkg.description | Should -Be 'Default description'
+    }
+
+    It 'Overrides categories and keywords when collection manifest provides them' {
+        $null = Invoke-ExtensionCollectionsGeneration -RepoRoot $script:tempDir
+        $pkgPath = Join-Path $script:tempDir 'extension/package.ado.json'
+        $pkg = Get-Content $pkgPath -Raw | ConvertFrom-Json
+        $pkg.categories | Should -Be @('Education', 'Other')
+        $pkg.keywords | Should -Be @('ado', 'devops')
+    }
+
+    It 'Uses template-default categories when collection manifest omits them' {
+        $null = Invoke-ExtensionCollectionsGeneration -RepoRoot $script:tempDir
+        $pkgPath = Join-Path $script:tempDir 'extension/package.hve-core-all.json'
+        $pkg = Get-Content $pkgPath -Raw | ConvertFrom-Json
+        $pkg.categories | Should -Be @('Chat')
+        $pkg.PSObject.Properties.Name | Should -Not -Contain 'keywords'
     }
 
     It 'Throws when package template is missing' {
