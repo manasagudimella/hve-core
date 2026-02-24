@@ -85,6 +85,26 @@
         "additionalProperties": false
       }
     },
+    "displayName": {
+      "type": "string",
+      "minLength": 1,
+      "description": "VS Code Marketplace display name. Used as the extension title when the collection is packaged standalone."
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "VS Code Marketplace categories for the standalone extension package."
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 5,
+      "description": "VS Code Marketplace keywords for the standalone extension package. Maximum 5 items per Marketplace rules."
+    },
     "display": {
       "type": "object",
       "properties": {
