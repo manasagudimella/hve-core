@@ -1,4 +1,4 @@
-Coaching identity, quality constraints, and methodology instructions for AI-enhanced design thinking across nine methods. The collection supports the HVE Design Thinking pyramid structure spanning Problem, Solution, and Implementation spaces.
+AI-assisted Design Thinking methodology coach — 9 methods from problem scoping through implementation handoff. The collection supports the HVE Design Thinking pyramid structure spanning Problem, Solution, and Implementation spaces.
 
 This collection includes agents, prompts, and instructions for:
 

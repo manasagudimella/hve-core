@@ -1,11 +1,20 @@
 id: design-thinking
 name: Design Thinking
-description: Design Thinking coaching identity, quality constraints, and methodology instructions for AI-enhanced design thinking across nine methods
+displayName: HVE Design Thinking
+description: AI-assisted Design Thinking methodology coach — 9 methods from problem scoping through implementation handoff
 tags:
   - design-thinking
   - coaching
   - methodology
   - ux
+categories:
+  - Education
+  - Other
+keywords:
+  - design-thinking
+  - methodology
+  - coaching
+  - copilot
 maturity: experimental
 items:
   # Agents

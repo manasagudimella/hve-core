@@ -1,7 +1,7 @@
 <!-- markdownlint-disable-file -->
 # Design Thinking
 
-Design Thinking coaching identity, quality constraints, and methodology instructions for AI-enhanced design thinking across nine methods
+AI-assisted Design Thinking methodology coach — 9 methods from problem scoping through implementation handoff
 
 > **⚠️ Experimental** — This collection is experimental. Contents and behavior may change or be removed without notice.
 

@@ -282,11 +282,21 @@ function Invoke-ExtensionCollectionsGeneration {
             default        { Get-CollectionDisplayName -CollectionManifest $collection -DefaultValue ([string]$packageTemplate.displayName) }
         }
 
-        $packageTemplateOutput = Copy-TemplateWithOverrides -Template $packageTemplate -Overrides @{
+        $overrides = @{
             name        = $extensionName
             displayName = $extensionDisplayName
             description = $collectionDescription
         }
+
+        if ($collection.ContainsKey('categories') -and $collection.categories -is [System.Collections.IList] -and $collection.categories.Count -gt 0) {
+            $overrides['categories'] = @($collection.categories | ForEach-Object { [string]$_ })
+        }
+
+        if ($collection.ContainsKey('keywords') -and $collection.keywords -is [System.Collections.IList] -and $collection.keywords.Count -gt 0) {
+            $overrides['keywords'] = @($collection.keywords | ForEach-Object { [string]$_ })
+        }
+
+        $packageTemplateOutput = Copy-TemplateWithOverrides -Template $packageTemplate -Overrides $overrides
 
         $packagePath = switch ($collectionId) {
             'hve-core'     { Join-Path $RepoRoot 'extension/package.json' }
